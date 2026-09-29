@@ -1,0 +1,13 @@
+import * as db from './db.js';import {esc,money,r2,$,uid,toast,CFG} from './ui.js';
+export function printInvoice(v){$('#print').innerHTML=`<h2>${esc(CFG.name)}</h2><p>${esc(v.no)} · ${new Date(v.at).toLocaleString()}${v.customer?' · '+esc(v.customer):''}${v.status==='cancelled'?' · CANCELLED':''}</p>
+<table class="tbl"><tr><th>Item<th class="n">Qty<th class="n">Price<th class="n">Amount</tr>${v.lines.map(l=>`<tr><td>${esc(l.name)}<td class="n">${l.qty} ${esc(l.unit)}<td class="n">${money(l.price)}<td class="n">${money(l.qty*l.price)}</tr>`).join('')}</table>
+<p>Subtotal ${money(v.sub)} · Discount −${money(v.d)} · Tax ${money(v.tax)}</p><h3>Total ${money(v.total)}</h3><p>Paid (${esc(v.method)}) ${money(v.paid)} · Due ${money(v.due)}</p><p>${esc(CFG.footer)}</p>`;setTimeout(()=>print(),50)}
+export async function render(root){const list=(await db.all('invoices')).sort((a,b)=>b.at-a.at);const day=new Date().toDateString();
+const live=list.filter(i=>i.status==='active'),today=live.filter(i=>new Date(i.at).toDateString()===day);
+root.innerHTML=`<h1>Invoices</h1><div class="stats"><div class="card"><b>${money(today.reduce((s,i)=>s+i.total,0))}</b><span>Today's sales (${today.length} bills)</span></div><div class="card"><b>${money(live.reduce((s,i)=>s+i.total,0))}</b><span>All-time sales</span></div><div class="card"><b>${money(live.reduce((s,i)=>s+i.due,0))}</b><span>Outstanding dues</span></div></div>
+<div class="card wrap">${list.length?`<table class="tbl"><tr><th>No.<th>Date<th class="n">Total<th class="n">Due<th>Status<th></tr>${list.map(i=>`<tr><td>${esc(i.no)}<td>${new Date(i.at).toLocaleString()}<td class="n">${money(i.total)}<td class="n">${money(i.due)}<td class="${i.status==='cancelled'?'void':''}">${i.status}<td class="n"><button class="btn alt" data-p="${i.id}">Print</button> ${i.status==='active'?`<button class="btn alt" data-c="${i.id}">Cancel</button>`:''}</tr>`).join('')}</table>`:'<div class="empty">No invoices yet. Completed sales appear here.</div>'}</div>`;
+root.onclick=async e=>{const p=e.target.dataset.p,c=e.target.dataset.c;if(p)printInvoice(list.find(i=>i.id===p));
+if(c&&confirm('Cancel this invoice? Stock will be returned and the bill kept in history as cancelled.')){
+await db.tx(['products','invoices','moves'],async s=>{const i=await db.req(s.invoices.get(c));if(i.status!=='active')return;
+for(const l of i.lines){const pr=await db.req(s.products.get(l.pid));if(pr){pr.stock=r2(pr.stock+l.qty);s.products.put(pr)}s.moves.put({id:uid(),pid:l.pid,name:l.name,qty:l.qty,type:'cancel',ref:i.id,at:Date.now()})}
+i.status='cancelled';i.cancelledAt=Date.now();s.invoices.put(i)});toast('Invoice cancelled, stock restored');render(root)}}}
