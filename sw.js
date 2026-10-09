@@ -1,13 +1,13 @@
 /* ProPOS Service Worker
    নতুন ভার্সন দিলে শুধু CACHE_VERSION নম্বর বাড়ান (v1 -> v2) */
-const CACHE_VERSION = 'v1';
+const CACHE_VERSION = 'v2';
 const APP_CACHE = `propos-app-${CACHE_VERSION}`;
 const CDN_CACHE = `propos-cdn-${CACHE_VERSION}`;
 
 const APP_SHELL = [
   './',
   './index.html',
-  './css/style.css',
+  './assets/style.css',
   './js/app.js',
   './js/tailwind-config.js',
   './js/pwa.js',
@@ -28,7 +28,10 @@ const CDN_HOSTS = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(APP_CACHE).then((cache) => cache.addAll(APP_SHELL))
+    caches.open(APP_CACHE)
+      // একটি ফাইল ব্যর্থ হলেও পুরো ইনস্টল যেন বাতিল না হয়
+      .then((cache) => Promise.all(APP_SHELL.map((u) => cache.add(u).catch(() => null))))
+      .then(() => self.skipWaiting())
   );
 });
 
