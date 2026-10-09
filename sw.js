@@ -1,6 +1,6 @@
 /* ProPOS Service Worker
    নতুন ভার্সন দিলে শুধু CACHE_VERSION নম্বর বাড়ান (v1 -> v2) */
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 const APP_CACHE = `propos-app-${CACHE_VERSION}`;
 const CDN_CACHE = `propos-cdn-${CACHE_VERSION}`;
 
