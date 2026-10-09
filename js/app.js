@@ -15,6 +15,7 @@ function safeLoad(key, fallback) {
 function safeSave(key, value) {
     try {
         localStorage.setItem(key, JSON.stringify(value));
+        if (key !== 'propos_cart') localStorage.setItem('propos_dirty', '1'); // ব্যাকআপ বাকি
         return true;
     } catch (e) {
         console.error('সেভ ব্যর্থ:', key, e);
@@ -44,7 +45,6 @@ let isBtConnected = false;
 
 // INIT
 document.addEventListener('DOMContentLoaded', () => {
-    if (products.length === 0) document.getElementById('sample-data-banner').classList.remove('hidden');
     loadSettingsToUI();
     renderProducts();
     renderCart();
@@ -57,6 +57,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // NAV
 function showView(view) {
+    document.body.dataset.view = view;
+    ['product-modal','checkout-modal','receipt-modal'].forEach(id => {
+        const m = document.getElementById(id); if (m) m.classList.add('hidden');
+    });
     document.querySelectorAll('.view').forEach(v => v.classList.add('hidden'));
     document.getElementById('view-' + view).classList.remove('hidden');
     
@@ -76,6 +80,11 @@ function showView(view) {
     if (view === 'settings') loadSettingsToUI();
     
     closeMobileCart();
+}
+
+function closeMobileNavIfOpen() {
+    const nav = document.getElementById('mobile-nav');
+    if (nav && nav.classList.contains('open')) toggleMobileNav();
 }
 
 function toggleMobileNav() {
@@ -252,7 +261,10 @@ function saveProduct(e) {
 }
 
 function deleteProduct(id) {
-    if (!confirm('এই পণ্যটি মুছে ফেলতে চান?')) return;
+    const pr = products.find(x => x.id === id);
+    askConfirm(`"${pr ? pr.name : 'এই পণ্য'}" মুছে ফেলবেন? এটি আর ফেরানো যাবে না।`, () => doDeleteProduct(id), {title:'পণ্য মুছবেন?', yes:'হ্যাঁ, মুছুন', danger:true});
+}
+function doDeleteProduct(id) {
     products = products.filter(p => p.id !== id);
     cart = cart.filter(c => c.id !== id);
     saveProducts();
@@ -897,42 +909,21 @@ function saveSettings() {
     toast('সেটিংস সংরক্ষিত হয়েছে ✓');
 }
 
-// SAMPLE & EXPORT
-function loadSampleData() {
-    products = [
-        { id:'p1', name:'চা', barcode:'8901001', category:'পানীয়', cost:5, price:10, stock:100, minStock:20, unit:'কাপ', image:null },
-        { id:'p2', name:'কফি', barcode:'8901002', category:'পানীয়', cost:15, price:30, stock:50, minStock:10, unit:'কাপ', image:null },
-        { id:'p3', name:'বিস্কুট', barcode:'8901003', category:'খাবার', cost:12, price:20, stock:80, minStock:15, unit:'প্যাকেট', image:null },
-        { id:'p4', name:'চিপস', barcode:'8901004', category:'খাবার', cost:15, price:25, stock:60, minStock:10, unit:'প্যাকেট', image:null },
-        { id:'p5', name:'পানি (৫০০মিলি)', barcode:'8901005', category:'পানীয়', cost:8, price:15, stock:120, minStock:30, unit:'বোতল', image:null },
-        { id:'p6', name:'সফট ড্রিঙ্ক', barcode:'8901006', category:'পানীয়', cost:20, price:35, stock:40, minStock:10, unit:'ক্যান', image:null },
-        { id:'p7', name:'স্যান্ডউইচ', barcode:'8901007', category:'খাবার', cost:40, price:80, stock:25, minStock:5, unit:'পিস', image:null },
-        { id:'p8', name:'কেক স্লাইস', barcode:'8901008', category:'খাবার', cost:25, price:50, stock:15, minStock:5, unit:'পিস', image:null },
-        { id:'p9', name:'নোটবুক', barcode:'8901009', category:'স্টেশনারি', cost:25, price:40, stock:30, minStock:5, unit:'পিস', image:null },
-        { id:'p10', name:'কলম', barcode:'8901010', category:'স্টেশনারি', cost:5, price:10, stock:100, minStock:20, unit:'পিস', image:null },
-        { id:'p11', name:'সাবান', barcode:'8901011', category:'দৈনন্দিন', cost:30, price:45, stock:8, minStock:10, unit:'পিস', image:null },
-        { id:'p12', name:'শ্যাম্পু', barcode:'8901012', category:'দৈনন্দিন', cost:80, price:120, stock:20, minStock:5, unit:'বোতল', image:null }
-    ];
-    saveProducts();
-    document.getElementById('sample-data-banner').classList.add('hidden');
-    renderProducts();
-    updateCategoryFilters();
-    toast('ডেমো পণ্য লোড হয়েছে! ✓');
-}
-
-function exportData() {
+// EXPORT / IMPORT
+function exportData(silent) {
     const data = { app: 'ProPOS', version: 2, products, sales, settings, exportDate: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'propos-backup-' + new Date().toISOString().slice(0,10) + '.json';
+    const n = new Date(), z = x => String(x).padStart(2,'0');
+    a.download = `propos-backup-${n.getFullYear()}-${z(n.getMonth()+1)}-${z(n.getDate())}_${z(n.getHours())}-${z(n.getMinutes())}.json`;
     document.body.appendChild(a);
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    try { localStorage.setItem('propos_last_backup', String(Date.now())); } catch (_) {}
-    toast('ব্যাকআপ ফাইল ডাউনলোড হয়েছে ✓');
+    try { localStorage.setItem('propos_last_backup', String(Date.now())); localStorage.removeItem('propos_dirty'); } catch (_) {}
+    if (!silent) toast('ব্যাকআপ ফাইল ডাউনলোড হয়েছে ✓');
 }
 
 function importData(input) {
@@ -944,14 +935,15 @@ function importData(input) {
         try {
             const d = JSON.parse(e.target.result);
             if (!Array.isArray(d.products) || !Array.isArray(d.sales)) throw new Error('ভুল ফাইল');
-            if (!confirm(`ব্যাকআপ থেকে ${d.products.length}টি পণ্য ও ${d.sales.length}টি বিক্রয় রিস্টোর হবে। বর্তমান ডেটা মুছে যাবে। নিশ্চিত?`)) return;
-            products = d.products;
-            sales = d.sales;
-            settings = Object.assign({}, DEFAULT_SETTINGS, d.settings || {});
-            cart = [];
-            saveProducts(); saveSales(); saveCart(); safeSave('propos_settings', settings);
-            toast('রিস্টোর সফল ✓');
-            setTimeout(() => location.reload(), 600);
+            askConfirm(`ব্যাকআপ থেকে ${d.products.length}টি পণ্য ও ${d.sales.length}টি বিক্রয় রিস্টোর হবে। বর্তমান ডেটা মুছে যাবে।`, () => {
+                products = d.products;
+                sales = d.sales;
+                settings = Object.assign({}, DEFAULT_SETTINGS, d.settings || {});
+                cart = [];
+                saveProducts(); saveSales(); saveCart(); safeSave('propos_settings', settings);
+                toast('রিস্টোর সফল ✓');
+                setTimeout(() => location.reload(), 600);
+            }, {title:'ব্যাকআপ রিস্টোর করবেন?', yes:'হ্যাঁ, রিস্টোর করুন', danger:true});
         } catch (err) {
             console.error(err);
             toast('⚠️ ফাইলটি সঠিক ProPOS ব্যাকআপ নয়');
@@ -962,18 +954,18 @@ function importData(input) {
 }
 
 function wipeAllData() {
-    if (!confirm('সব ডেটা মুছে যাবে! আগে ব্যাকআপ নিয়েছেন তো? নিশ্চিত?')) return;
-    ['propos_products','propos_sales','propos_cart','propos_settings','propos_last_backup'].forEach(k => localStorage.removeItem(k));
-    location.reload();
+    askConfirm('সব পণ্য, বিক্রয় ইতিহাস ও সেটিংস স্থায়ীভাবে মুছে যাবে। মুছার আগে স্বয়ংক্রিয়ভাবে একটি ব্যাকআপ ফাইল ডাউনলোড হবে।', () => {
+        askConfirm('সত্যিই সব ডেটা মুছতে চান? এই কাজ ফেরানো যাবে না!', () => {
+            exportData(true);
+            setTimeout(() => {
+                ['propos_products','propos_sales','propos_cart','propos_settings','propos_last_backup','propos_dirty'].forEach(k => localStorage.removeItem(k));
+                location.reload();
+            }, 900);
+        }, {title:'শেষ নিশ্চিতকরণ', yes:'হ্যাঁ, সব মুছুন', danger:true});
+    }, {title:'সব ডেটা মুছবেন?', yes:'চালিয়ে যান', danger:true});
 }
 
-function backupReminder() {
-    if (!sales.length) return;
-    const last = parseInt(localStorage.getItem('propos_last_backup') || '0', 10);
-    if (Date.now() - last > 7 * 24 * 3600 * 1000) {
-        setTimeout(() => toast('💾 ৭ দিনের বেশি ব্যাকআপ নেওয়া হয়নি — সেটিংস থেকে ব্যাকআপ নিন'), 2500);
-    }
-}
+function backupReminder() { if (window.UI && UI.checkPendingBackup) UI.checkPendingBackup(); }
 
 // গ্লোবাল এরর ধরা — অ্যাপ যেন নিঃশব্দে না ভাঙে
 window.addEventListener('error', e => { console.error(e.error || e.message); });
@@ -989,6 +981,7 @@ function saveCart() { return safeSave('propos_cart', cart); }
 function toast(msg) {
     const el = document.getElementById('toast');
     el.textContent = msg;
+    if (window.Sound) Sound.play(/✓/.test(msg) ? 'success' : /⚠/.test(msg) ? 'warn' : null);
     el.classList.remove('hidden');
     clearTimeout(el._timer);
     el._timer = setTimeout(() => el.classList.add('hidden'), 2800);
