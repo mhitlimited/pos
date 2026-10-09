@@ -1,6 +1,6 @@
 /* ProPOS Service Worker
    নতুন ভার্সন দিলে শুধু CACHE_VERSION নম্বর বাড়ান (v1 -> v2) */
-const CACHE_VERSION = 'v2';
+const CACHE_VERSION = 'v3';
 const APP_CACHE = `propos-app-${CACHE_VERSION}`;
 const CDN_CACHE = `propos-cdn-${CACHE_VERSION}`;
 
@@ -11,6 +11,7 @@ const APP_SHELL = [
   './js/app.js',
   './js/tailwind-config.js',
   './js/pwa.js',
+  './js/ui.js',
   './manifest.webmanifest',
   './icons/icon-192.png',
   './icons/icon-512.png',
