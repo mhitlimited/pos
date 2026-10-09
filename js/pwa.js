@@ -84,4 +84,27 @@
     bar.querySelector('button').onclick = () => worker.postMessage('SKIP_WAITING');
     document.body.appendChild(bar);
   }
+
+  // ---------- Persistent storage (ব্রাউজার যেন ডেটা নিজে থেকে না মুছে) ----------
+  if (navigator.storage && navigator.storage.persist) {
+    navigator.storage.persist().catch(() => {});
+  }
+
+  // ---------- Online / Offline badge ----------
+  function updateNet() {
+    let b = document.getElementById('net-badge');
+    if (navigator.onLine) { if (b) b.remove(); return; }
+    if (!b) {
+      b = document.createElement('div');
+      b.id = 'net-badge';
+      b.textContent = '● অফলাইন মোড';
+      b.style.cssText = 'position:fixed;top:calc(8px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);' +
+        'z-index:10001;background:#f59e0b;color:#fff;font-size:12px;font-weight:600;padding:4px 12px;border-radius:999px;' +
+        'box-shadow:0 4px 12px rgba(0,0,0,.2);pointer-events:none';
+      document.body.appendChild(b);
+    }
+  }
+  window.addEventListener('online', updateNet);
+  window.addEventListener('offline', updateNet);
+  document.addEventListener('DOMContentLoaded', updateNet);
 })();

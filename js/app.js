@@ -1,8 +1,36 @@
+// ===== SAFE STORAGE =====
+const DEFAULT_SETTINGS = {shopName:"আমার দোকান",shopAddress:"",shopPhone:"",defaultTax:0};
+function safeLoad(key, fallback) {
+    try {
+        const raw = localStorage.getItem(key);
+        if (raw === null) return fallback;
+        const val = JSON.parse(raw);
+        return (val === null || typeof val !== typeof fallback) ? fallback : val;
+    } catch (e) {
+        console.error('ডেটা পড়া যায়নি:', key, e);
+        try { localStorage.setItem(key + '_corrupt_' + Date.now(), localStorage.getItem(key)); } catch (_) {}
+        return fallback;
+    }
+}
+function safeSave(key, value) {
+    try {
+        localStorage.setItem(key, JSON.stringify(value));
+        return true;
+    } catch (e) {
+        console.error('সেভ ব্যর্থ:', key, e);
+        toast('⚠️ ডেটা সেভ হয়নি! স্টোরেজ ভরে গেছে — ব্যাকআপ নিয়ে পুরনো ডেটা/ছবি কমান');
+        return false;
+    }
+}
+function esc(v) {
+    return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
 // DATA
-let products = JSON.parse(localStorage.getItem('propos_products') || '[]');
-let sales = JSON.parse(localStorage.getItem('propos_sales') || '[]');
-let cart = JSON.parse(localStorage.getItem('propos_cart') || '[]');
-let settings = JSON.parse(localStorage.getItem('propos_settings') || '{"shopName":"আমার দোকান","shopAddress":"","shopPhone":"","defaultTax":0}');
+let products = safeLoad('propos_products', []);
+let sales = safeLoad('propos_sales', []);
+let cart = safeLoad('propos_cart', []);
+let settings = Object.assign({}, DEFAULT_SETTINGS, safeLoad('propos_settings', {}));
 let currentCategory = 'all';
 let paymentMethod = 'cash';
 let editingProductId = null;
@@ -23,6 +51,8 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCategoryFilters();
     showView('pos');
     checkBtSupport();
+    closeMobileCart();
+    backupReminder();
 });
 
 // NAV
@@ -95,10 +125,10 @@ function renderProducts() {
                 ${imgHtml}
                 ${isLow ? '<span class="absolute top-1.5 right-1.5 bg-red-500 text-white text-[10px] px-1.5 py-0.5 rounded-full font-medium">কম স্টক</span>' : ''}
             </div>
-            <h3 class="font-medium text-sm text-slate-800 truncate leading-tight">${p.name}</h3>
+            <h3 class="font-medium text-sm text-slate-800 truncate leading-tight">${esc(p.name)}</h3>
             <div class="flex justify-between items-center mt-1.5">
                 <span class="text-primary-600 font-bold text-sm">৳${fmt(p.price)}</span>
-                <span class="text-xs ${isLow ? 'text-red-500 font-medium' : 'text-slate-400'}">${p.stock} ${p.unit||''}</span>
+                <span class="text-xs ${isLow ? 'text-red-500 font-medium' : 'text-slate-400'}">${p.stock} ${esc(p.unit||'')}</span>
             </div>
         </div>`;
     }).join('');
@@ -165,14 +195,27 @@ function closeProductModal() {
 }
 
 function previewImage(input) {
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = e => {
-            currentImageBase64 = e.target.result;
-            document.getElementById('product-image-preview').innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover">`;
+    const file = input.files && input.files[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { toast('শুধু ছবি ফাইল দিন'); return; }
+    const reader = new FileReader();
+    reader.onload = e => {
+        const img = new Image();
+        img.onload = () => {
+            // ছবি ছোট করে (সর্বোচ্চ 400px) সংরক্ষণ — স্টোরেজ বাঁচাতে
+            const max = 400;
+            const ratio = Math.min(1, max / Math.max(img.width, img.height));
+            const c = document.createElement('canvas');
+            c.width = Math.round(img.width * ratio);
+            c.height = Math.round(img.height * ratio);
+            c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+            currentImageBase64 = c.toDataURL('image/jpeg', 0.75);
+            document.getElementById('product-image-preview').innerHTML = `<img src="${currentImageBase64}" class="w-full h-full object-cover">`;
         };
-        reader.readAsDataURL(input.files[0]);
-    }
+        img.onerror = () => toast('ছবি পড়া যায়নি');
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
 }
 
 function saveProduct(e) {
@@ -253,14 +296,14 @@ function renderProductsTable() {
             <td class="p-4">
                 <div class="flex items-center gap-3">
                     ${img}
-                    <span class="font-medium text-slate-800">${p.name}</span>
+                    <span class="font-medium text-slate-800">${esc(p.name)}</span>
                 </div>
             </td>
-            <td class="p-4 text-slate-500 font-mono text-xs">${p.barcode || '—'}</td>
-            <td class="p-4"><span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-md">${p.category || '—'}</span></td>
+            <td class="p-4 text-slate-500 font-mono text-xs">${esc(p.barcode || '—')}</td>
+            <td class="p-4"><span class="bg-slate-100 text-slate-600 text-xs px-2 py-1 rounded-md">${esc(p.category || '—')}</span></td>
             <td class="p-4 text-right text-slate-500">৳${fmt(p.cost||0)}</td>
             <td class="p-4 text-right font-semibold text-slate-800">৳${fmt(p.price)}</td>
-            <td class="p-4 text-right ${isLow?'text-red-500 font-semibold':'text-slate-600'}">${p.stock} ${p.unit||''}</td>
+            <td class="p-4 text-right ${isLow?'text-red-500 font-semibold':'text-slate-600'}">${p.stock} ${esc(p.unit||'')}</td>
             <td class="p-4 text-center">
                 <button onclick="openProductModal('${p.id}')" class="text-primary-600 hover:bg-primary-50 p-2 rounded-lg transition"><i class="fas fa-pen text-xs"></i></button>
                 <button onclick="deleteProduct('${p.id}')" class="text-red-500 hover:bg-red-50 p-2 rounded-lg transition"><i class="fas fa-trash text-xs"></i></button>
@@ -334,7 +377,7 @@ function renderCart() {
         const html = cart.map(item => `
             <div class="cart-item flex items-center gap-2.5 bg-slate-50 rounded-xl p-2.5">
                 <div class="flex-1 min-w-0">
-                    <div class="font-medium text-sm text-slate-800 truncate">${item.name}</div>
+                    <div class="font-medium text-sm text-slate-800 truncate">${esc(item.name)}</div>
                     <div class="text-xs text-slate-400">৳${fmt(item.price)} × ${item.qty}</div>
                 </div>
                 <div class="flex items-center gap-1">
@@ -478,7 +521,7 @@ function showReceipt(sale) {
     let itemsHtml = sale.items.map(item => `
         <div class="flex justify-between py-1">
             <div>
-                <div>${item.name}</div>
+                <div>${esc(item.name)}</div>
                 <div class="text-xs text-slate-400">${item.qty} × ৳${fmt(item.price)}</div>
             </div>
             <div class="font-medium">৳${fmt(item.price * item.qty)}</div>
@@ -487,9 +530,9 @@ function showReceipt(sale) {
     
     document.getElementById('receipt-content').innerHTML = `
         <div class="text-center mb-4">
-            <div class="font-bold text-base">${shop.shopName || 'ProPOS'}</div>
-            ${shop.shopAddress ? `<div class="text-xs text-slate-400 mt-0.5">${shop.shopAddress}</div>` : ''}
-            ${shop.shopPhone ? `<div class="text-xs text-slate-400">ফোন: ${shop.shopPhone}</div>` : ''}
+            <div class="font-bold text-base">${esc(shop.shopName || 'ProPOS')}</div>
+            ${shop.shopAddress ? `<div class="text-xs text-slate-400 mt-0.5">${esc(shop.shopAddress)}</div>` : ''}
+            ${shop.shopPhone ? `<div class="text-xs text-slate-400">ফোন: ${esc(shop.shopPhone)}</div>` : ''}
             <div class="text-xs text-slate-400 mt-1 border-t border-dashed pt-1">বিক্রয় রসিদ</div>
         </div>
         <div class="text-xs text-slate-400 mb-3 space-y-0.5">
@@ -508,7 +551,7 @@ function showReceipt(sale) {
                 <div class="flex justify-between text-sm"><span class="text-slate-500">ফেরত</span><span>৳${fmt(sale.change)}</span></div>
             ` : ''}
         </div>
-        ${sale.note ? `<div class="mt-3 text-xs text-slate-400 border-t border-dashed pt-2">নোট: ${sale.note}</div>` : ''}
+        ${sale.note ? `<div class="mt-3 text-xs text-slate-400 border-t border-dashed pt-2">নোট: ${esc(sale.note)}</div>` : ''}
         <div class="text-center text-xs text-slate-300 mt-5">ধন্যবাদ! আবার আসবেন</div>
     `;
     
@@ -776,7 +819,7 @@ function renderHistory() {
                     <span class="text-[10px] font-medium px-2 py-0.5 rounded-full ${methodColors[sale.paymentMethod]}">${methodNames[sale.paymentMethod]}</span>
                 </div>
             </div>
-            <div class="text-xs text-slate-400 truncate">${sale.items.map(i => i.name + ' ×' + i.qty).join(' · ')}</div>
+            <div class="text-xs text-slate-400 truncate">${sale.items.map(i => esc(i.name) + ' ×' + i.qty).join(' · ')}</div>
         </div>`;
     }).join('');
 }
@@ -799,8 +842,8 @@ function renderDashboard() {
     } else {
         lowList.innerHTML = lowStock.map(p => `
             <div class="flex justify-between items-center py-2.5 border-b border-slate-50 last:border-0">
-                <span class="text-sm text-slate-700">${p.name}</span>
-                <span class="text-sm font-semibold text-red-500 bg-red-50 px-2 py-0.5 rounded-md">${p.stock} ${p.unit||''}</span>
+                <span class="text-sm text-slate-700">${esc(p.name)}</span>
+                <span class="text-sm font-semibold text-red-500 bg-red-50 px-2 py-0.5 rounded-md">${p.stock} ${esc(p.unit||'')}</span>
             </div>
         `).join('');
     }
@@ -819,7 +862,7 @@ function renderDashboard() {
     } else {
         topList.innerHTML = topSelling.map((p, i) => `
             <div class="flex justify-between items-center py-2.5 border-b border-slate-50 last:border-0">
-                <span class="text-sm text-slate-700"><span class="text-slate-300 font-medium mr-2">${i+1}</span>${p.name}</span>
+                <span class="text-sm text-slate-700"><span class="text-slate-300 font-medium mr-2">${i+1}</span>${esc(p.name)}</span>
                 <span class="text-sm font-semibold text-primary-600">${p.qty} বিক্রি</span>
             </div>
         `).join('');
@@ -846,7 +889,7 @@ function saveSettings() {
         shopPhone: document.getElementById('shop-phone').value.trim(),
         defaultTax: parseFloat(document.getElementById('default-tax').value) || 0
     };
-    localStorage.setItem('propos_settings', JSON.stringify(settings));
+    safeSave('propos_settings', settings);
     
     document.getElementById('tax-input').value = settings.defaultTax;
     document.getElementById('mobile-tax-input').value = settings.defaultTax;
@@ -878,23 +921,70 @@ function loadSampleData() {
 }
 
 function exportData() {
-    const data = { products, sales, settings, exportDate: new Date().toISOString() };
+    const data = { app: 'ProPOS', version: 2, products, sales, settings, exportDate: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
     a.download = 'propos-backup-' + new Date().toISOString().slice(0,10) + '.json';
+    document.body.appendChild(a);
     a.click();
-    URL.revokeObjectURL(url);
-    toast('ডেটা এক্সপোর্ট হয়েছে ✓');
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    try { localStorage.setItem('propos_last_backup', String(Date.now())); } catch (_) {}
+    toast('ব্যাকআপ ফাইল ডাউনলোড হয়েছে ✓');
 }
+
+function importData(input) {
+    const file = input.files && input.files[0];
+    input.value = '';
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+        try {
+            const d = JSON.parse(e.target.result);
+            if (!Array.isArray(d.products) || !Array.isArray(d.sales)) throw new Error('ভুল ফাইল');
+            if (!confirm(`ব্যাকআপ থেকে ${d.products.length}টি পণ্য ও ${d.sales.length}টি বিক্রয় রিস্টোর হবে। বর্তমান ডেটা মুছে যাবে। নিশ্চিত?`)) return;
+            products = d.products;
+            sales = d.sales;
+            settings = Object.assign({}, DEFAULT_SETTINGS, d.settings || {});
+            cart = [];
+            saveProducts(); saveSales(); saveCart(); safeSave('propos_settings', settings);
+            toast('রিস্টোর সফল ✓');
+            setTimeout(() => location.reload(), 600);
+        } catch (err) {
+            console.error(err);
+            toast('⚠️ ফাইলটি সঠিক ProPOS ব্যাকআপ নয়');
+        }
+    };
+    reader.onerror = () => toast('ফাইল পড়া যায়নি');
+    reader.readAsText(file);
+}
+
+function wipeAllData() {
+    if (!confirm('সব ডেটা মুছে যাবে! আগে ব্যাকআপ নিয়েছেন তো? নিশ্চিত?')) return;
+    ['propos_products','propos_sales','propos_cart','propos_settings','propos_last_backup'].forEach(k => localStorage.removeItem(k));
+    location.reload();
+}
+
+function backupReminder() {
+    if (!sales.length) return;
+    const last = parseInt(localStorage.getItem('propos_last_backup') || '0', 10);
+    if (Date.now() - last > 7 * 24 * 3600 * 1000) {
+        setTimeout(() => toast('💾 ৭ দিনের বেশি ব্যাকআপ নেওয়া হয়নি — সেটিংস থেকে ব্যাকআপ নিন'), 2500);
+    }
+}
+
+// গ্লোবাল এরর ধরা — অ্যাপ যেন নিঃশব্দে না ভাঙে
+window.addEventListener('error', e => { console.error(e.error || e.message); });
+window.addEventListener('unhandledrejection', e => { console.error(e.reason); });
 
 // HELPERS
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
 function fmt(n) { return Number(n).toLocaleString('en-BD', { maximumFractionDigits: 2 }); }
-function saveProducts() { localStorage.setItem('propos_products', JSON.stringify(products)); }
-function saveSales() { localStorage.setItem('propos_sales', JSON.stringify(sales)); }
-function saveCart() { localStorage.setItem('propos_cart', JSON.stringify(cart)); }
+function saveProducts() { return safeSave('propos_products', products); }
+function saveSales() { return safeSave('propos_sales', sales); }
+function saveCart() { return safeSave('propos_cart', cart); }
 
 function toast(msg) {
     const el = document.getElementById('toast');
