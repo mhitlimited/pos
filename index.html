@@ -20,7 +20,6 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap">
     <style>.hidden{display:none!important}.drawer{position:fixed;top:0;height:100%;transition:transform .28s}.drawer.left{left:0;transform:translateX(-100%)}.drawer.right{right:0;transform:translateX(100%)}.drawer.open{transform:none}</style>
     <link rel="stylesheet" href="style.css">
 </head>
@@ -28,7 +27,7 @@
 
 <!-- Desktop sidebar -->
 <aside class="sidebar" id="sidebar">
-    <div class="brand"><div class="logo"><i class="fas fa-cash-register"></i></div><div><div class="fw7" style="font-size:17px">ProPOS</div><div class="xs muted">Free Point of Sale</div></div></div>
+    <div class="brand"><div class="logo"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M4 7.5A2.5 2.5 0 016.5 5h11A2.5 2.5 0 0120 7.5v9a2.5 2.5 0 01-2.5 2.5h-11A2.5 2.5 0 014 16.5v-9z" stroke="currentColor" stroke-width="1.75"/><path d="M8 9.5h8M8 12.5h5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><circle cx="16.5" cy="15" r="1.25" fill="currentColor"/></svg></div><div><div class="fw7" style="font-size:17px">ProPOS</div><div class="xs muted">Free Point of Sale</div></div></div>
     <nav class="nav" id="nav-desk"></nav>
     <div style="padding:10px;border-top:1px solid var(--border)" class="flex col gap2">
         <div class="js-acct"></div>
@@ -55,7 +54,7 @@
 
 <!-- Mobile Menu -->
 <aside id="mobile-nav" class="drawer left">
-    <div class="brand"><div class="logo"><i class="fas fa-cash-register"></i></div><div class="grow"><div class="fw7" style="font-size:17px">ProPOS</div><div class="xs muted">Free Point of Sale</div></div><button class="icon-btn" onclick="App.closeDrawers()"><i class="fas fa-xmark"></i></button></div>
+    <div class="brand"><div class="logo"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M4 7.5A2.5 2.5 0 016.5 5h11A2.5 2.5 0 0120 7.5v9a2.5 2.5 0 01-2.5 2.5h-11A2.5 2.5 0 014 16.5v-9z" stroke="currentColor" stroke-width="1.75"/><path d="M8 9.5h8M8 12.5h5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><circle cx="16.5" cy="15" r="1.25" fill="currentColor"/></svg></div><div class="grow"><div class="fw7" style="font-size:17px">ProPOS</div><div class="xs muted">Free Point of Sale</div></div><button class="icon-btn" onclick="App.closeDrawers()"><i class="fas fa-xmark"></i></button></div>
     <nav class="nav" id="nav-mob"></nav>
     <div style="padding:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--border)" class="flex col gap2">
         <div class="js-acct" onclick="App.closeDrawers()"></div>

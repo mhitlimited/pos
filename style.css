@@ -98,7 +98,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13.5px}
 .r{text-align:right}.c{text-align:center}
 
 /* নেভিগেশন */
-.sidebar{position:fixed;left:0;top:0;height:100%;width:256px;background:var(--card);border-right:1px solid var(--border);z-index:40;flex-direction:column}
+.sidebar{position:fixed;left:0;top:0;height:100%;width:268px;background:var(--card);border-right:1px solid var(--border);z-index:40;flex-direction:column}
 .brand{display:flex;align-items:center;gap:10px;padding:18px 18px 14px;border-bottom:1px solid var(--border)}
 .logo{width:38px;height:38px;border-radius:12px;background:linear-gradient(135deg,var(--primary),var(--primary2));display:flex;align-items:center;justify-content:center;color:#fff;font-size:16px}
 .nav{padding:10px;flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:3px}
@@ -109,7 +109,7 @@ table.tbl{width:100%;border-collapse:collapse;font-size:13.5px}
 .nav-sep{font-size:11px;color:var(--muted);padding:10px 14px 4px;font-weight:700;letter-spacing:.04em}
 .topbar{position:sticky;top:0;z-index:30;background:var(--card);border-bottom:1px solid var(--border);padding:8px 12px;padding-top:calc(8px + env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between;box-shadow:var(--shadow)}
 .main{min-height:100vh;padding:12px;padding-bottom:calc(24px + env(safe-area-inset-bottom))}
-@media(min-width:1024px){.main{margin-left:256px;padding:20px}}
+@media(min-width:1024px){.main{margin-left:268px;padding:20px}}
 .view{max-width:1200px;margin:0 auto}
 body[data-view]:not([data-view="pos"]) .pos-only{display:none!important}
 .cart-badge{position:absolute;top:-2px;right:-2px;background:var(--bad);color:#fff;font-size:10px;font-weight:700;border-radius:99px;min-width:17px;height:17px;display:flex;align-items:center;justify-content:center;padding:0 4px}
@@ -334,7 +334,7 @@ body{
 .cb-total{font-size:17px;font-weight:800}
 .cb-arrow{font-size:12px;opacity:.8}
 body:not([data-view="pos"]) .cart-bar{display:none}
-@media(min-width:1024px){.cart-bar{left:calc(256px + 12px)}}
+@media(min-width:1024px){.cart-bar{left:calc(268px + 12px)}}
 @media(min-width:1280px){.cart-bar{display:none!important}}
 @media(max-width:1279px){
   body[data-view="pos"] .main{padding-bottom:calc(96px + env(safe-area-inset-bottom))}
@@ -403,3 +403,176 @@ code.sel{display:inline-block;margin-top:4px;-webkit-user-select:all;user-select
 .legal-links a,.tc.muted.xs a{color:inherit;text-decoration:underline}
 .consent-note{font-size:11.5px;color:var(--muted,#64748b);text-align:center;margin-top:10px;line-height:1.6}
 .consent-note a{color:inherit;text-decoration:underline}
+
+/* ========== Professional polish & responsive desktop ========== */
+*{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif}
+
+/* Refined SVG-friendly icons */
+.nav-link i,.btn i,.icon-btn i,.sec-title i,.stat .k i{
+  font-size:1.05em;line-height:1;display:inline-flex;align-items:center;justify-content:center;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale
+}
+.nav-link i{width:22px;height:22px;font-size:16px;opacity:.92}
+.nav-link.active i{opacity:1}
+.logo{width:40px;height:40px;border-radius:12px;padding:0;overflow:hidden}
+.logo svg{width:22px;height:22px;display:block}
+.brand .fw7{letter-spacing:-.02em}
+
+/* Sidebar desktop professional */
+@media(min-width:1024px){
+  .sidebar{width:268px;box-shadow:1px 0 0 var(--border),4px 0 24px rgba(15,23,42,.04)}
+  .main{margin-left:268px;padding:24px 28px}
+  .view{max-width:1400px}
+  .nav-link{padding:12px 14px;font-size:14.5px;border-radius:12px;gap:14px}
+  .nav-link:hover{transform:translateX(2px);transition:transform .15s ease,background .15s}
+  .nav-link.active{box-shadow:0 6px 16px rgba(79,70,229,.28)}
+  .brand{padding:20px 18px 16px}
+  .pos-grid{gap:20px}
+  .pgrid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px}
+  .pcard{border-radius:16px;padding:12px;transition:transform .15s ease,box-shadow .15s ease,border-color .15s}
+  .pcard:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(15,23,42,.08);border-color:color-mix(in srgb,var(--primary) 35%,var(--border))}
+  .pcard .pimg{height:96px;border-radius:12px}
+  .cart-desk{border-radius:18px;box-shadow:var(--shadow);max-height:calc(100vh - 48px);overflow:auto}
+  .search-wrap{border-radius:16px;padding:14px}
+  .page-head h2{font-size:22px;letter-spacing:-.02em}
+  .stats{gap:14px}
+  .stat{border-radius:16px;padding:16px}
+  .btn{border-radius:12px;font-weight:600}
+  .btn-primary{box-shadow:0 2px 8px rgba(79,70,229,.25)}
+  .btn-primary:hover{filter:brightness(1.05)}
+  .card{border-radius:16px}
+  .modal-sheet{max-width:520px}
+  .modal-sheet.wide{max-width:720px}
+}
+
+/* Large desktop POS cart column */
+@media(min-width:1280px){
+  .pos-grid{grid-template-columns:1fr 400px;gap:24px}
+  .cart-desk{position:sticky;top:24px}
+  .main{padding:28px 32px}
+}
+@media(min-width:1600px){
+  .pos-grid{grid-template-columns:1fr 420px}
+  .pgrid{grid-template-columns:repeat(auto-fill,minmax(172px,1fr))}
+  .view{max-width:1600px}
+}
+
+/* Tablet */
+@media(min-width:700px) and (max-width:1023px){
+  .main{padding:16px 18px}
+  .pgrid{grid-template-columns:repeat(auto-fill,minmax(148px,1fr))}
+  .stats{grid-template-columns:repeat(2,1fr)}
+}
+
+/* Mobile refinements */
+@media(max-width:699px){
+  .pgrid{grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px}
+  .pcard{padding:10px;border-radius:14px}
+  .pcard .pimg{height:76px}
+  .btn{min-height:42px}
+  .icon-btn{width:42px;height:42px}
+}
+
+/* Icon buttons more polished */
+.icon-btn{
+  width:40px;height:40px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;
+  transition:background .15s,border-color .15s,transform .1s
+}
+.icon-btn:hover{background:var(--hover);border-color:color-mix(in srgb,var(--primary) 30%,var(--border))}
+.icon-btn:active{transform:scale(.96)}
+.icon-btn i{font-size:16px}
+
+/* Scanner status chip (optional visual) */
+.scan-ready{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);padding:4px 10px;border-radius:99px;background:var(--input);border:1px solid var(--border)}
+.scan-ready i{color:var(--ok);font-size:11px}
+
+/* Focus ring for accessibility */
+.btn:focus-visible,.nav-link:focus-visible,.icon-btn:focus-visible,.pcard:focus-visible{
+  outline:2px solid var(--primary2);outline-offset:2px
+}
+
+/* Print receipt stays monospace */
+.receipt,.receipt *{font-family:'Courier New',ui-monospace,monospace}
+
+/* ========== Professional polish & responsive desktop ========== */
+*{font-family:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif}
+
+.nav-link i,.btn i,.icon-btn i,.sec-title i{
+  font-size:1.05em;line-height:1;display:inline-flex;align-items:center;justify-content:center;
+  -webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale
+}
+.nav-link i{width:22px;height:22px;font-size:16px;opacity:.92}
+.nav-link.active i{opacity:1}
+.logo{width:40px;height:40px;border-radius:12px;padding:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.logo svg{width:22px;height:22px;display:block}
+.brand .fw7{letter-spacing:-.02em}
+
+@media(min-width:1024px){
+  .sidebar{width:268px;box-shadow:1px 0 0 var(--border),4px 0 24px rgba(15,23,42,.04)}
+  .main{margin-left:268px;padding:24px 28px}
+  .view{max-width:1400px}
+  .nav-link{padding:12px 14px;font-size:14.5px;border-radius:12px;gap:14px}
+  .nav-link:hover{transform:translateX(2px);transition:transform .15s ease,background .15s}
+  .nav-link.active{box-shadow:0 6px 16px rgba(79,70,229,.28)}
+  .brand{padding:20px 18px 16px}
+  .pos-grid{gap:20px}
+  .pgrid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px}
+  .pcard{border-radius:16px;padding:12px;transition:transform .15s ease,box-shadow .15s ease,border-color .15s}
+  .pcard:hover{transform:translateY(-2px);box-shadow:0 8px 24px rgba(15,23,42,.08);border-color:color-mix(in srgb,var(--primary) 35%,var(--border))}
+  .pcard .pimg{height:96px;border-radius:12px}
+  .cart-desk{border-radius:18px;box-shadow:var(--shadow);max-height:calc(100vh - 48px);overflow:auto}
+  .search-wrap{border-radius:16px;padding:14px}
+  .page-head h2{font-size:22px;letter-spacing:-.02em}
+  .stats{gap:14px}
+  .stat{border-radius:16px;padding:16px}
+  .btn{border-radius:12px;font-weight:600}
+  .btn-primary{box-shadow:0 2px 8px rgba(79,70,229,.25)}
+  .card{border-radius:16px}
+}
+
+@media(min-width:1280px){
+  .pos-grid{grid-template-columns:1fr 400px;gap:24px}
+  .cart-desk{position:sticky;top:24px}
+  .main{padding:28px 32px}
+}
+@media(min-width:1600px){
+  .pos-grid{grid-template-columns:1fr 420px}
+  .pgrid{grid-template-columns:repeat(auto-fill,minmax(172px,1fr))}
+  .view{max-width:1600px}
+}
+
+@media(min-width:700px) and (max-width:1023px){
+  .main{padding:16px 18px}
+  .pgrid{grid-template-columns:repeat(auto-fill,minmax(148px,1fr))}
+}
+
+@media(max-width:699px){
+  .pgrid{grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px}
+  .pcard{padding:10px;border-radius:14px}
+  .pcard .pimg{height:76px}
+  .btn{min-height:42px}
+  .icon-btn{width:42px;height:42px}
+}
+
+.icon-btn{
+  width:40px;height:40px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;
+  border:1px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;
+  transition:background .15s,border-color .15s,transform .1s
+}
+.icon-btn:hover{background:var(--hover);border-color:color-mix(in srgb,var(--primary) 30%,var(--border))}
+.icon-btn:active{transform:scale(.96)}
+.icon-btn i{font-size:16px}
+
+.scan-ready{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);padding:4px 10px;border-radius:99px;background:var(--input);border:1px solid var(--border)}
+.scan-ready i{color:var(--ok);font-size:11px}
+
+.btn:focus-visible,.nav-link:focus-visible,.icon-btn:focus-visible,.pcard:focus-visible{
+  outline:2px solid var(--primary2);outline-offset:2px
+}
+.receipt,.receipt *{font-family:'Courier New',ui-monospace,monospace}
+
+.only-desk{display:none!important}
+@media(min-width:1024px){.only-desk{display:inline-flex!important}}
+@media(min-width:1024px){.main{margin-left:268px}}
+@media(min-width:1024px){.cart-bar{left:calc(268px + 12px)}}
