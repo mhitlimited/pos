@@ -182,9 +182,9 @@ body[data-view]:not([data-view="pos"]) .pos-only{display:none!important}
 .bar small{font-size:10.5px;color:var(--muted)}.bar b{font-size:10px;color:var(--muted)}
 
 /* টোস্ট, ডায়ালগ */
-#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#0f172a;color:#fff;padding:11px 20px;border-radius:99px;box-shadow:0 10px 30px rgba(0,0,0,.35);z-index:200;font-size:14px;font-weight:600;max-width:90vw;text-align:center}
+#toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translateX(-50%);background:#0f172a;color:#fff;padding:11px 20px;border-radius:99px;box-shadow:0 10px 30px rgba(0,0,0,.35);z-index:500;font-size:14px;font-weight:600;max-width:90vw;text-align:center}
 html.dark #toast{background:#e6eaf2;color:#0a1020}
-.ui-confirm-backdrop{position:fixed;inset:0;z-index:150;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(2,6,23,.6);backdrop-filter:blur(5px);animation:fade .15s}
+.ui-confirm-backdrop{position:fixed;inset:0;z-index:350;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(2,6,23,.6);backdrop-filter:blur(5px);animation:fade .15s}
 .ui-confirm{width:100%;max-width:360px;background:var(--card);color:var(--text);border-radius:20px;padding:24px 20px 18px;text-align:center;box-shadow:0 25px 60px -12px rgba(0,0,0,.5);animation:rise .18s}
 .ui-confirm-icon{width:56px;height:56px;margin:0 auto 12px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:24px;background:var(--psoft);color:var(--ptext)}
 .ui-confirm-icon.danger{background:var(--badsoft);color:var(--bad)}
@@ -394,3 +394,12 @@ code.sel{display:inline-block;margin-top:4px;-webkit-user-select:all;user-select
   .cart-item.new{animation:none!important;opacity:1}
 }
 .cart-ico{display:inline-block;min-width:18px;min-height:18px;text-align:center}
+
+/* স্ক্যানারের ভেতরের বার্তা */
+.scan .sc-msg{position:absolute;left:50%;top:62%;transform:translateX(-50%);max-width:88vw;padding:10px 18px;border-radius:99px;background:#16a34a;color:#fff;font-size:14px;font-weight:600;text-align:center;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:3}
+.scan .sc-msg.bad{background:#dc2626}
+/* আইনি লিংক */
+.legal-links{font-size:11.5px;text-align:center;color:var(--muted,#64748b);padding:2px 0}
+.legal-links a,.tc.muted.xs a{color:inherit;text-decoration:underline}
+.consent-note{font-size:11.5px;color:var(--muted,#64748b);text-align:center;margin-top:10px;line-height:1.6}
+.consent-note a{color:inherit;text-decoration:underline}
