@@ -350,13 +350,12 @@
     } else if (clientId() && !hasLocal() && !get(KEY.welcomed)) showWelcome('new');
     renderUI();
     if (clientId() && navigator.onLine && (isOn() || !get(KEY.welcomed))) loadGIS().catch(() => {});
-    window.addEventListener('online', () => { if (isOn() && get(KEY.dirty) === '1') { setStatus(validTok() ? 'pending' : 'auth'); push(); } });
+    window.addEventListener('online', () => { if (isOn() && get(KEY.dirty) === '1') { if (validTok()) { setStatus('pending'); push(); } else setStatus('auth'); } });
     window.addEventListener('offline', () => { if (isOn()) renderUI(); });
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && isOn() && get(KEY.dirty) === '1') push(); });
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && isOn() && get(KEY.dirty) === '1' && validTok()) push(); });
     // Sync pending + টোকেন Expiryোত্তীর্ণ হলে পরবর্তী ক্লিক/ট্যাপেই (ব্রাউজার পপআপ অনুমতি দেয়) নবায়নের চেষ্টা — সর্বোচ্চ ১০ মিনিটে একবার
-    document.addEventListener('click', () => {
-      if (isOn() && get(KEY.dirty) === '1' && !validTok() && !S.authP && !S.busy && navigator.onLine && Date.now() - S.lastTry > 10 * 60 * 1000 && !document.querySelector('.modal-back,.ui-confirm-backdrop,.lock')) syncNow();
-    }, true);
+    // Token renewal only on explicit Sync now / Sign in — never on random page clicks
+    // (old global click→syncNow opened Google OAuth popup unexpectedly)
   }
 
   window.Cloud = { init, markDirty, signIn, signOut, syncNow, pull, snapshots, panel, setup, renderUI, isOn };

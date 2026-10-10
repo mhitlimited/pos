@@ -230,7 +230,7 @@
         <button class="btn btn-danger-soft btn-block mt2" onclick="wipeAllData()"><i class="fas fa-trash"></i> Delete all data</button></div>
       <div class="card pad mb3"><div class="sec-title"><i class="fas fa-scale-balanced ptext"></i> Legal</div>
         <div class="grid2"><a class="btn btn-ghost" href="privacy.html" target="_blank" rel="noopener"><i class="fas fa-user-shield"></i> Privacy Policy</a><a class="btn btn-ghost" href="terms.html" target="_blank" rel="noopener"><i class="fas fa-file-contract"></i> Terms of Service</a></div></div>
-      <div class="tc muted xs">ProPOS v8 · ফ্রি Offline POS · ডেটা আপনার ডিভাইসেই থাকে<br>© MH IT Limited · <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a> · <a href="terms.html" target="_blank" rel="noopener">Terms of Service</a></div>`;
+      <div class="tc muted xs">ProPOS v8 · Free offline POS · Data stays on your device<br>© MH IT Limited · <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a> · <a href="terms.html" target="_blank" rel="noopener">Terms of Service</a></div>`;
       Theme.apply(); Printer.ui(); if (window.Cloud) Cloud.renderUI();
     },
     save() {

@@ -83,6 +83,9 @@
   const num = v => { const n = parseFloat(v); return isFinite(n) ? n : 0; };
   const r2 = n => Math.round((n + Number.EPSILON) * 100) / 100;
   const fmt = n => Number(n || 0).toLocaleString('en-BD', { maximumFractionDigits: 2 });
+
+  const UNIT_MAP = { 'পিস':'Pcs','কেজি':'Kg','গ্রাম':'g','লিটার':'L','মিটার':'m','ডজন':'Dozen','বক্স':'Box','প্যাকেট':'Packet','বোতল':'Bottle','জোড়া':'Pair','কাপ':'Cup' };
+  const unitLabel = u => UNIT_MAP[u] || u || 'Pcs';
   const money = n => '৳' + fmt(n);
   const genId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
   const z2 = x => String(x).padStart(2, '0');
@@ -228,7 +231,7 @@
   }
 
   const api = { K, DEFAULTS, DB, safeLoad, safeSave, save, saveAll, load, migrate, esc, num, r2, fmt, money, genId, z2, dkey, todayKey, addDays, monthStart,
-    fmtDate, fmtTime, fmtDT, invLabel, toast, findProduct, findCustomer, findSupplier, findSale, customerBalance, supplierBalance, totalCustomerDue,
+    fmtDate, fmtTime, fmtDT, invLabel, toast, unitLabel, findProduct, findCustomer, findSupplier, findSale, customerBalance, supplierBalance, totalCustomerDue,
     totalSupplierDue, returnedQty, returnedAmount, customerLedger, supplierLedger, buildReport, stockValue, toCSV, parseCSV, download, inRange };
   root.Core = api;
   if (typeof module !== 'undefined') module.exports = api;

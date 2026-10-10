@@ -156,7 +156,7 @@
           <div class="pimg">${p.image ? `<img src="${esc(p.image)}" alt="">` : '<i class="fas fa-box"></i>'}</div>
           ${exp ? '<span class="ptag">Expired</span>' : (p.track !== false && p.stock <= 0 ? '<span class="ptag">Out of stock</span>' : (low ? '<span class="ptag" style="background:#d97706">Low Stock</span>' : ''))}
           <div class="pname">${esc(p.name)}</div>
-          <div class="pmeta"><span class="pprice">${money(p.price)}</span><span class="${low ? 'bad fw6' : 'muted'}">${p.track === false ? '∞' : p.stock + ' ' + esc(p.unit || '')}</span></div></div>`;
+          <div class="pmeta"><span class="pprice">${money(p.price)}</span><span class="${low ? 'bad fw6' : 'muted'}">${p.track === false ? '∞' : p.stock + ' ' + esc(C.unitLabel ? C.unitLabel(p.unit) : (p.unit || ''))}</span></div></div>`;
       }).join('');
       const more = $('pos-more'); if (more) more.classList.toggle('hidden', list.length <= this.limit);
       const hc = $('hold-count'); if (hc) hc.textContent = DB.hold.length ? ' ' + DB.hold.length : '';
@@ -346,10 +346,11 @@
       return { paid, change, due };
     },
     complete() {
+      if (this._busy) return; this._busy = true;
       const t = this.totals(); const { paid, change, due } = this.coCalc();
-      if (!DB.cart.length) return;
-      if (due > 0 && !this.customerId) { toast('⚠️ Select a customer for due'); this.coPick(); return; }
-      for (const it of DB.cart) { const p = findProduct(it.id); if (p && p.track !== false && p.stock < it.qty) { toast('⚠️ ' + it.name + '  has insufficient stock!'); return; } }
+      if (!DB.cart.length) { this._busy = false; return; }
+      if (due > 0 && !this.customerId) { this._busy = false; toast('⚠️ Select a customer for due'); this.coPick(); return; }
+      for (const it of DB.cart) { const p = findProduct(it.id); if (p && p.track !== false && p.stock < it.qty) { this._busy = false; toast('⚠️ ' + it.name + ' has insufficient stock!'); return; } }
       const cust = findCustomer(this.customerId);
       const proceed = () => {
         DB.cart.forEach(it => { const p = findProduct(it.id); if (p && p.track !== false) p.stock = r2(p.stock - it.qty); });
@@ -363,11 +364,11 @@
         DB.sales.unshift(sale); DB.cart = [];
         C.save('products'); C.save('sales'); C.save('cart'); C.save('settings');
         this.resetBill(); Modal.closeAll(); this.renderCart(); this.renderGrid();
-        Receipt.show(sale, { fresh: true }); toast('Sale completed! ✓');
+        Receipt.show(sale, { fresh: true }); toast('Sale completed! ✓'); this._busy = false; const _s=$('pos-search'); if(_s) setTimeout(()=>_s.focus(), 300);
       };
       if (cust && due > 0) {
         const lim = num(cust.creditLimit); const after = C.customerBalance(cust.id) + due;
-        if (lim > 0 && after > lim) { askConfirm(`${cust.name}- due limit is ${money(lim)}. After this sale due will be ${money(after)}. Continue anyway?`, proceed, { title: 'Exceeds due limit', danger: true, yes: 'Yes, Continue' }); return; }
+        if (lim > 0 && after > lim) { this._busy = false; askConfirm(`${cust.name} — due limit is ${money(lim)}. After this sale due will be ${money(after)}. Continue anyway?`, () => { this._busy = true; proceed(); }, { title: 'Exceeds due limit', danger: true, yes: 'Yes, continue' }); return; }
       }
       proceed();
     }
@@ -492,7 +493,31 @@
 
   // ================= Hardware barcode scanner (USB/Bluetooth keyboard wedge) =================
   // Desktop POS: scanners type digits fast and send Enter — auto-add product to cart
-  (function setupWedgeScanner() {
+  (function 
+  // ================= Desktop keyboard shortcuts =================
+  document.addEventListener('keydown', e => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const tag = (document.activeElement && document.activeElement.tagName || '').toLowerCase();
+    const typing = tag === 'input' || tag === 'textarea' || tag === 'select' || (document.activeElement && document.activeElement.isContentEditable);
+    if (document.querySelector('.modal-back,.ui-confirm-backdrop,.lock,.scan')) {
+      if (e.key === 'Escape') { try { Modal.closeAll(); } catch (_) {} }
+      return;
+    }
+    if (e.key === 'Escape') { App.closeDrawers(); return; }
+    if (e.key === 'F2') {
+      e.preventDefault();
+      if (App.view !== 'pos') App.go('pos');
+      setTimeout(() => { const s = document.getElementById('pos-search'); if (s) s.focus(); }, 50);
+      return;
+    }
+    if (e.key === 'F4' && App.view === 'pos' && !typing) {
+      e.preventDefault();
+      if (DB.cart.length) POS.checkout();
+      return;
+    }
+  });
+
+  // setupWedgeScanner() {
     let buf = '', last = 0, timer = null;
     const GAP = 80;      // max ms between chars from a scanner
     const MIN_LEN = 4;   // ignore short accidental keys
@@ -527,10 +552,10 @@
         if (s) { s.value = ''; }
         // Blur active field so next scan is captured cleanly; cart updates for checkout
         try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch (_) {}
-        try { Sound && Sound.play && Sound.play('ok'); } catch (_) {}
+        try { window.Sound && window.Sound.play && window.Sound.play('ok'); } catch (_) {}
       } else {
         toast('⚠️ Barcode not found: ' + code);
-        try { Sound && Sound.play && Sound.play('err'); } catch (_) {}
+        try { window.Sound && window.Sound.play && window.Sound.play('err'); } catch (_) {}
       }
     }
 
