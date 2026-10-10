@@ -1,6 +1,5 @@
-/* ProPOS কনফিগ — Google সাইন-ইনের জন্য এখানে আপনার OAuth Client ID বসান।
-   কীভাবে পাবেন: README.md-এর "Google Drive সেটআপ" অংশ দেখুন (অ্যাপের সেটিংসেও গাইড আছে)।
-   উদাহরণ: googleClientId: '1234567890-abcdefg.apps.googleusercontent.com' */
+/* ProPOS কনফিগ — Google সাইন-ইনের জন্য OAuth Client ID।
+   Client ID গোপন নয়, ব্রাউজারে থাকাই স্বাভাবিক। কিন্তু Client SECRET কখনো এখানে বা GitHub-এ রাখবেন না। */
 window.PROPOS_CONFIG = {
-  googleClientId: ''
+  googleClientId: '984274944481-2aeko6a7j35s1ghb0lpe9i4sntfc17hr.apps.googleusercontent.com'
 };
