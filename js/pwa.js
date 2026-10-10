@@ -1,4 +1,4 @@
-/* PWA: Service Worker রেজিস্টার + ইনস্টল বাটন + আপডেট নোটিফিকেশন */
+/* PWA: Service Worker রেজিস্টার + ইনস্টল বাটন + Update Noteিফিকেশন */
 (function () {
   'use strict';
 
@@ -8,7 +8,7 @@
       try {
         const hadController = !!navigator.serviceWorker.controller;
         const reg = await navigator.serviceWorker.register('./sw.js');
-        if (reg.waiting && hadController) showUpdateBar(reg.waiting);   // আগের ভিজিটে নামা আপডেট অপেক্ষায় থাকলে আবার দেখান
+        if (reg.waiting && hadController) showUpdateBar(reg.waiting);   // আগের ভিজিটে Nameা Update অপেক্ষায় থাকলে আবার দেখান
 
         reg.addEventListener('updatefound', () => {
           const nw = reg.installing;
@@ -27,7 +27,7 @@
           location.reload();
         });
       } catch (err) {
-        console.warn('Service Worker রেজিস্টার হয়নি:', err);
+        console.warn('Service Worker registration failed:', err);
       }
     });
   }
@@ -42,7 +42,7 @@
     const b = document.createElement('button');
     b.id = 'pwa-install-btn';
     b.type = 'button';
-    b.innerHTML = '<i class="fa-solid fa-download"></i> অ্যাপ ইনস্টল করুন';
+    b.innerHTML = '<i class="fa-solid fa-download"></i> Install app';
     b.style.cssText =
       'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom));' +
       'z-index:9999;background:#4f46e5;color:#fff;border:0;border-radius:999px;padding:12px 22px;' +
@@ -81,13 +81,13 @@
       'background:#0f172a;color:#fff;border-radius:14px;padding:12px 16px;display:flex;gap:12px;' +
       'align-items:center;justify-content:space-between;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.35)';
     bar.innerHTML =
-      '<span>নতুন ভার্সন পাওয়া গেছে</span>' +
-      '<button style="background:#6366f1;color:#fff;border:0;border-radius:10px;padding:8px 14px;font-weight:600;cursor:pointer">আপডেট</button>';
+      '<span>New version available</span>' +
+      '<button style="background:#6366f1;color:#fff;border:0;border-radius:10px;padding:8px 14px;font-weight:600;cursor:pointer">Update</button>';
     bar.querySelector('button').onclick = () => worker.postMessage('SKIP_WAITING');
     document.body.appendChild(bar);
   }
 
-  // ---------- Persistent storage (ব্রাউজার যেন ডেটা নিজে থেকে না মুছে) ----------
+  // ---------- Persistent storage (ব্রাউজার যেন ডেটা নিজে from না মুছে) ----------
   if (navigator.storage && navigator.storage.persist) {
     navigator.storage.persist().catch(() => {});
   }
@@ -99,7 +99,7 @@
     if (!b) {
       b = document.createElement('div');
       b.id = 'net-badge';
-      b.textContent = '● অফলাইন মোড';
+      b.textContent = '● Offline mode';
       b.style.cssText = 'position:fixed;top:calc(8px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);' +
         'z-index:10001;background:#f59e0b;color:#fff;font-size:12px;font-weight:600;padding:4px 12px;border-radius:999px;' +
         'box-shadow:0 4px 12px rgba(0,0,0,.2);pointer-events:none';

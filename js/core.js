@@ -9,8 +9,8 @@
     hold: 'propos_hold', cart: 'propos_cart', settings: 'propos_settings'
   };
   const DEFAULTS = {
-    shopName: 'আমার দোকান', shopAddress: '', shopPhone: '', defaultTax: 0,
-    footer: 'ধন্যবাদ! আবার আসবেন', paper: '58', btMode: 'image',
+    shopName: 'My Shop', shopAddress: '', shopPhone: '', defaultTax: 0,
+    footer: 'Thank you! Come again', paper: '58', btMode: 'image',
     invPrefix: '', nextInvoice: 1, pinHash: '', pinSalt: '', lowStockDefault: 5
   };
   const DB = { products: [], sales: [], customers: [], payments: [], suppliers: [], purchases: [],
@@ -25,7 +25,7 @@
       if (val === null || Array.isArray(val) !== Array.isArray(fallback) || typeof val !== typeof fallback) return fallback;
       return val;
     } catch (e) {
-      console.error('ডেটা পড়া যায়নি:', key, e);
+      console.error('Could not read data:', key, e);
       try { root.localStorage.setItem(key + '_corrupt_' + Date.now(), root.localStorage.getItem(key)); } catch (_) {}
       return fallback;
     }
@@ -36,8 +36,8 @@
       if (key !== K.cart) { root.localStorage.setItem('propos_dirty', '1'); if (root.Cloud) root.Cloud.markDirty(); }
       return true;
     } catch (e) {
-      console.error('সেভ ব্যর্থ:', key, e);
-      toast('⚠️ ডেটা সেভ হয়নি! স্টোরেজ ভরে গেছে — ব্যাকআপ নিয়ে পুরনো ডেটা/ছবি কমান');
+      console.error('Save failed:', key, e);
+      toast('⚠️ Data not saved! Storage full — free space or reduce old data/images');
       return false;
     }
   }
@@ -59,7 +59,7 @@
       if (p.track === undefined) { p.track = true; changed = true; }
       if (p.expiry === undefined) { p.expiry = ''; changed = true; }
     });
-    // সবচেয়ে পুরনো বিক্রয়ের নম্বর আগে (sales নতুন→পুরনো ক্রমে থাকে)
+    // Allচেয়ে পুরনো Salesের নম্বর আগে (sales নতুন→পুরনো ক্রমে থাকে)
     const need = DB.sales.some(s => s.no === undefined);
     if (need) {
       const old = DB.sales.filter(s => s.no !== undefined).map(s => s.no);
@@ -137,14 +137,14 @@
   }
   const returnedAmount = saleId => r2(DB.returns.filter(r => r.saleId === saleId).reduce((s, r) => s + num(r.amount), 0));
 
-  // ক্রেতার খতিয়ান (লেজার)
+  // Customerর Ledger (লেজার)
   function customerLedger(id) {
     const c = findCustomer(id); const rows = [];
     if (!c) return rows;
-    if (num(c.openingDue)) rows.push({ date: c.created || '1970-01-01T00:00:00.000Z', type: 'opening', desc: 'প্রারম্ভিক বাকি', debit: num(c.openingDue), credit: 0 });
-    DB.sales.forEach(s => { if (s.customerId === id) rows.push({ date: s.date, type: 'sale', desc: 'বিক্রয় #' + invLabel(s) + ' (মোট ' + money(s.total) + ', জমা ' + money(s.paid) + ')', debit: num(s.due), credit: 0, ref: s.id }); });
-    DB.payments.forEach(p => { if (p.customerId === id) rows.push({ date: p.date, type: 'payment', desc: 'বাকি আদায়' + (p.note ? ' — ' + p.note : ''), debit: 0, credit: num(p.amount), ref: p.id }); });
-    DB.returns.forEach(r => { if (r.customerId === id && r.refundType === 'due') rows.push({ date: r.date, type: 'return', desc: 'ফেরত (বাকি থেকে বাদ)', debit: 0, credit: num(r.amount), ref: r.id }); });
+    if (num(c.openingDue)) rows.push({ date: c.created || '1970-01-01T00:00:00.000Z', type: 'opening', desc: 'Opening due', debit: num(c.openingDue), credit: 0 });
+    DB.sales.forEach(s => { if (s.customerId === id) rows.push({ date: s.date, type: 'sale', desc: 'Sales #' + invLabel(s) + ' (Total ' + money(s.total) + ', Paid ' + money(s.paid) + ')', debit: num(s.due), credit: 0, ref: s.id }); });
+    DB.payments.forEach(p => { if (p.customerId === id) rows.push({ date: p.date, type: 'payment', desc: 'Due Collected' + (p.note ? ' — ' + p.note : ''), debit: 0, credit: num(p.amount), ref: p.id }); });
+    DB.returns.forEach(r => { if (r.customerId === id && r.refundType === 'due') rows.push({ date: r.date, type: 'return', desc: 'Returns (deducted from due)', debit: 0, credit: num(r.amount), ref: r.id }); });
     rows.sort((a, b) => a.date < b.date ? -1 : 1);
     let bal = 0; rows.forEach(r => { bal = r2(bal + r.debit - r.credit); r.balance = bal; });
     return rows;
@@ -152,15 +152,15 @@
   function supplierLedger(id) {
     const c = findSupplier(id); const rows = [];
     if (!c) return rows;
-    if (num(c.openingDue)) rows.push({ date: c.created || '1970-01-01T00:00:00.000Z', type: 'opening', desc: 'প্রারম্ভিক পাওনা', debit: num(c.openingDue), credit: 0 });
-    DB.purchases.forEach(p => { if (p.supplierId === id) rows.push({ date: p.date, type: 'purchase', desc: 'ক্রয় #' + p.no + ' (মোট ' + money(p.total) + ', পরিশোধ ' + money(p.paid) + ')', debit: num(p.due), credit: 0 }); });
-    DB.spayments.forEach(p => { if (p.supplierId === id) rows.push({ date: p.date, type: 'payment', desc: 'পরিশোধ' + (p.note ? ' — ' + p.note : ''), debit: 0, credit: num(p.amount) }); });
+    if (num(c.openingDue)) rows.push({ date: c.created || '1970-01-01T00:00:00.000Z', type: 'opening', desc: 'Opening payable', debit: num(c.openingDue), credit: 0 });
+    DB.purchases.forEach(p => { if (p.supplierId === id) rows.push({ date: p.date, type: 'purchase', desc: 'Purchases #' + p.no + ' (Total ' + money(p.total) + ', Payment ' + money(p.paid) + ')', debit: num(p.due), credit: 0 }); });
+    DB.spayments.forEach(p => { if (p.supplierId === id) rows.push({ date: p.date, type: 'payment', desc: 'Payment' + (p.note ? ' — ' + p.note : ''), debit: 0, credit: num(p.amount) }); });
     rows.sort((a, b) => a.date < b.date ? -1 : 1);
     let bal = 0; rows.forEach(r => { bal = r2(bal + r.debit - r.credit); r.balance = bal; });
     return rows;
   }
 
-  // রিপোর্ট
+  // Reports
   function inRange(iso, from, to) { const k = dkey(iso); return (!from || k >= from) && (!to || k <= to); }
   function buildReport(from, to) {
     const S = DB.sales.filter(s => inRange(s.date, from, to));
@@ -180,14 +180,14 @@
     const expenses = sum(E, e => e.amount);
     const byMethod = { cash: 0, card: 0, mobile: 0 };
     S.forEach(s => { const m = byMethod[s.paymentMethod] !== undefined ? s.paymentMethod : 'cash'; byMethod[m] += num(s.paid); });
-    // paid = বিক্রয়ে প্রযোজ্য টাকা (ফেরত বাদে)
+    // paid = Salesে প্রযোজ্য টাকা (Returns বাদে)
     const collected = {};
     ['cash', 'card', 'mobile'].forEach(m => { collected[m] = r2(byMethod[m] + sum(P.filter(p => (p.method || 'cash') === m), p => p.amount)); });
     const prod = {}; const cat = {};
     S.forEach(s => s.items.forEach(i => {
       const t = prod[i.id] = prod[i.id] || { name: i.name, qty: 0, amount: 0, profit: 0 };
       t.qty += i.qty; t.amount = r2(t.amount + i.price * i.qty); t.profit = r2(t.profit + (i.price - num(i.cost)) * i.qty);
-      const p = findProduct(i.id); const cn = (p && p.category) || 'অন্যান্য';
+      const p = findProduct(i.id); const cn = (p && p.category) || 'Other';
       cat[cn] = r2((cat[cn] || 0) + i.price * i.qty);
     }));
     return {

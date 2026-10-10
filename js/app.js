@@ -1,4 +1,4 @@
-/* ProPOS App: রাউটার, ব্যাক-বাটন, বিক্রয় কাউন্টার (POS), পণ্য */
+/* ProPOS App: রাউটার, ব্যাক-বাটন, Sales Counter (POS), Product */
 (function () {
   'use strict';
   const C = Core, { DB, esc, num, r2, fmt, money, genId, toast, findProduct, findCustomer } = C;
@@ -6,15 +6,15 @@
 
   // ================= রাউটার =================
   const NAV = [
-    { id: 'pos', label: 'বিক্রয় কাউন্টার', icon: 'fa-cash-register' },
-    { id: 'customers', label: 'ক্রেতা ও বাকি', icon: 'fa-users' },
-    { id: 'products', label: 'পণ্য ও স্টক', icon: 'fa-boxes-stacked' },
-    { id: 'purchases', label: 'ক্রয় ও সরবরাহকারী', icon: 'fa-truck-ramp-box' },
-    { id: 'expenses', label: 'খরচ', icon: 'fa-wallet' },
-    { id: 'history', label: 'বিক্রয় ইতিহাস', icon: 'fa-receipt' },
-    { id: 'reports', label: 'রিপোর্ট', icon: 'fa-chart-line' },
-    { id: 'dashboard', label: 'ড্যাশবোর্ড', icon: 'fa-chart-pie' },
-    { id: 'settings', label: 'সেটিংস', icon: 'fa-gear' }
+    { id: 'pos', label: 'Sales Counter', icon: 'fa-cash-register' },
+    { id: 'customers', label: 'Customers & Due', icon: 'fa-users' },
+    { id: 'products', label: 'Products & Stock', icon: 'fa-boxes-stacked' },
+    { id: 'purchases', label: 'Purchases & Suppliers', icon: 'fa-truck-ramp-box' },
+    { id: 'expenses', label: 'Expenses', icon: 'fa-wallet' },
+    { id: 'history', label: 'Sales History', icon: 'fa-receipt' },
+    { id: 'reports', label: 'Reports', icon: 'fa-chart-line' },
+    { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-pie' },
+    { id: 'settings', label: 'Settings', icon: 'fa-gear' }
   ];
   const Views = {};
   const App = window.App = {
@@ -52,12 +52,12 @@
   try { history.replaceState({ root: 1 }, ''); pushGuard(); } catch (_) {}
   window.addEventListener('popstate', () => {
     if (handleBack()) { pushGuard(); return; }
-    if (exitArmed) return;                       // দ্বিতীয় Back — সিস্টেম অ্যাপ বন্ধ করবে
-    exitArmed = true; toast('বের হতে আবার Back চাপুন (আগে ব্যাকআপ নিয়ে নিন)');
+    if (exitArmed) return;                       // দ্বিতীয় Back — সিস্টেম অ্যাপ Close করবে
+    exitArmed = true; toast('Press Back again to exit');
     setTimeout(() => { if (exitArmed) { exitArmed = false; pushGuard(); } }, 2500);
   });
 
-  // ================= অ্যানিমেশন: পণ্য কার্টে উড়ে যায় =================
+  // ================= অ্যানিমেশন: Product Cartে উড়ে যায় =================
   const Fx = window.Fx = {
     reduced() { return window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches; },
     cartTarget() {
@@ -102,7 +102,7 @@
     }
   };
 
-  // ================= বিক্রয় কাউন্টার =================
+  // ================= Sales Counter =================
   const POS = window.POS = {
     cat: 'all', q: '', limit: 120, disc: 0, discType: 'percent', tax: 0, customerId: null, note: '', payMethod: 'cash',
     taxInit() { this.tax = num(DB.settings.defaultTax); },
@@ -119,14 +119,14 @@
         <div class="card search-wrap">
           <div class="flex gap2 mb2">
             <div class="relative grow"><i class="fas fa-magnifying-glass search-ico"></i>
-              <input id="pos-search" class="input has-ico" placeholder="পণ্যের নাম বা বারকোড..." value="${esc(this.q)}" oninput="POS.search(this.value)" onkeydown="if(event.key==='Enter')POS.enter()" autocomplete="off"></div>
-            <button class="btn btn-soft" onclick="POS.scan()" title="ক্যামেরা স্ক্যান"><i class="fas fa-barcode"></i></button>
-            <button class="btn btn-soft" onclick="POS.showHold()" title="হোল্ড করা বিল"><i class="fas fa-pause"></i><span id="hold-count"></span></button>
+              <input id="pos-search" class="input has-ico" placeholder="Product name or barcode..." value="${esc(this.q)}" oninput="POS.search(this.value)" onkeydown="if(event.key==='Enter')POS.enter()" autocomplete="off"></div>
+            <button class="btn btn-soft" onclick="POS.scan()" title="Camera scan"><i class="fas fa-barcode"></i></button>
+            <button class="btn btn-soft" onclick="POS.showHold()" title="Held Bills"><i class="fas fa-pause"></i><span id="hold-count"></span></button>
           </div>
           <div class="chips" id="pos-cats"></div>
         </div>
         <div class="pgrid" id="pgrid"></div>
-        <div class="tc mt3"><button class="btn btn-ghost hidden" id="pos-more" onclick="POS.more()">আরও দেখান</button></div>
+        <div class="tc mt3"><button class="btn btn-ghost hidden" id="pos-more" onclick="POS.more()">Show more</button></div>
       </div>
       <div class="cart-desk card pad" id="cart-desk"></div></div>`;
       this.renderCats(); this.renderGrid(); this.renderCart();
@@ -134,7 +134,7 @@
     renderCats() {
       const cats = [...new Set(DB.products.map(p => p.category).filter(Boolean))].sort();
       const el = $('pos-cats'); if (!el) return;
-      el.innerHTML = ['all', ...cats].map(c => `<button class="chip ${this.cat === c ? 'on' : ''}" onclick="POS.setCat(this.dataset.c)" data-c="${esc(c)}">${c === 'all' ? 'সব' : esc(c)}</button>`).join('');
+      el.innerHTML = ['all', ...cats].map(c => `<button class="chip ${this.cat === c ? 'on' : ''}" onclick="POS.setCat(this.dataset.c)" data-c="${esc(c)}">${c === 'all' ? 'All' : esc(c)}</button>`).join('');
     },
     filtered() {
       const q = this.q.trim().toLowerCase();
@@ -145,15 +145,15 @@
     renderGrid() {
       const g = $('pgrid'); if (!g) return;
       const list = this.filtered(); const shown = list.slice(0, this.limit);
-      if (!DB.products.length) g.innerHTML = '<div class="empty card" style="grid-column:1/-1"><i class="fas fa-box-open"></i>এখনো কোনো পণ্য নেই।<br><button class="btn btn-primary mt3" onclick="Products.edit()">+ প্রথম পণ্য যোগ করুন</button></div>';
-      else if (!list.length) g.innerHTML = '<div class="empty" style="grid-column:1/-1"><i class="fas fa-magnifying-glass"></i>কোনো পণ্য পাওয়া যায়নি</div>';
+      if (!DB.products.length) g.innerHTML = '<div class="empty card" style="grid-column:1/-1"><i class="fas fa-box-open"></i>No products yet.<br><button class="btn btn-primary mt3" onclick="Products.edit()">+ Add first product</button></div>';
+      else if (!list.length) g.innerHTML = '<div class="empty" style="grid-column:1/-1"><i class="fas fa-magnifying-glass"></i>No products found</div>';
       else g.innerHTML = shown.map(p => {
         const low = p.track !== false && p.stock <= (p.minStock || 0);
         const exp = p.expiry && p.expiry < C.todayKey();
         return `<div class="pcard" data-id="${p.id}" onclick="POS.add('${p.id}')">
           <span class="pqty"></span><span class="added-fx"></span>
           <div class="pimg">${p.image ? `<img src="${esc(p.image)}" alt="">` : '<i class="fas fa-box"></i>'}</div>
-          ${exp ? '<span class="ptag">মেয়াদ শেষ</span>' : (p.track !== false && p.stock <= 0 ? '<span class="ptag">স্টক নেই</span>' : (low ? '<span class="ptag" style="background:#d97706">কম স্টক</span>' : ''))}
+          ${exp ? '<span class="ptag">Expired</span>' : (p.track !== false && p.stock <= 0 ? '<span class="ptag">Out of stock</span>' : (low ? '<span class="ptag" style="background:#d97706">Low Stock</span>' : ''))}
           <div class="pname">${esc(p.name)}</div>
           <div class="pmeta"><span class="pprice">${money(p.price)}</span><span class="${low ? 'bad fw6' : 'muted'}">${p.track === false ? '∞' : p.stock + ' ' + esc(p.unit || '')}</span></div></div>`;
       }).join('');
@@ -168,7 +168,7 @@
     search(v) { this.q = v; this.limit = 120; this.renderGrid(); },
     setCat(c) { this.cat = c; this.limit = 120; this.renderCats(); this.renderGrid(); },
     more() { this.limit += 120; this.renderGrid(); },
-    // বারকোড মেলানো: স্পেস বাদ, আর UPC-A (১২ সংখ্যা) ও EAN-13 (শুরুতে 0) সমান ধরা হয়
+    // Barcode মেলানো: স্পেস বাদ, আর UPC-A (১২ সংখ্যা)  & EAN-13 (শুরুতে 0) সমান ধরা হয়
     findByBarcode(code) {
       const key = x => { x = String(x == null ? '' : x).trim(); return /^\d{12,13}$/.test(x) ? x.padStart(13, '0') : x; };
       const k = key(code); if (!k) return null;
@@ -180,16 +180,16 @@
       const list = this.filtered();
       const p = exact || (list.length === 1 ? list[0] : null);
       if (p) { this.add(p.id); this.q = ''; const s = $('pos-search'); if (s) { s.value = ''; s.focus(); } this.renderGrid(); }
-      else toast('একাধিক বা কোনো পণ্য মেলেনি');
+      else toast('Multiple or no match');
     },
     scan() {
       if (!window.Scanner || Scanner.isOpen()) return;
       Scanner.open(code => {
         const p = this.findByBarcode(code);
-        if (!p) { Scanner.flash('⚠️ বারকোড পাওয়া যায়নি: ' + code, 'bad'); return false; }   // ক্যামেরা খোলা থাকে, আবার চেষ্টা করা যায়
-        Scanner.close();                                         // পণ্য মিলেছে → ক্যামেরা সাথে সাথে বন্ধ
-        this.add(p.id, true, { picked: true });                  // কার্টে সিলেক্ট + "প্রোডাক্ট সিলেক্ট হয়েছে" বার্তা
-      }, { hint: 'পণ্যের বারকোড ফ্রেমে ধরুন' });
+        if (!p) { Scanner.flash('⚠️ Barcode not found: ' + code, 'bad'); return false; }   // ক্যামেরা খোলা থাকে, আবার চেষ্টা করা যায়
+        Scanner.close();                                         // Product মিলেছে → ক্যামেরা সাথে সাথে Close
+        this.add(p.id, true, { picked: true });                  // Cartে সিলেক্ট + "Product selected" বার্তা
+      }, { hint: 'Hold product barcode in frame' });
     },
     add(id, quiet, opt) {
       opt = opt || {};
@@ -197,41 +197,41 @@
       const go = () => {
         const ex = DB.cart.find(c => c.id === id);
         if (p.track !== false) {
-          if (p.stock <= 0) { toast('⚠️ স্টক নেই!'); return; }
-          if (ex && ex.qty >= p.stock) { toast('⚠️ স্টক অপর্যাপ্ত!'); return; }
+          if (p.stock <= 0) { toast('⚠️ Out of stock!'); return; }
+          if (ex && ex.qty >= p.stock) { toast('⚠️ Insufficient stock!'); return; }
         }
         if (ex) ex.qty++; else DB.cart.push({ id: p.id, name: p.name, price: p.price, cost: p.cost || 0, qty: 1, unit: p.unit });
         C.save('cart'); this.lastAdded = { id: p.id, isNew: !ex }; this.renderCart(); Fx.added(p.id, quiet);
-        if (opt.picked) toast('✓ প্রোডাক্ট সিলেক্ট হয়েছে: ' + p.name);
+        if (opt.picked) toast('✓ Product selected: ' + p.name);
         else if (quiet) Sound.play('beep');
       };
-      if (p.expiry && p.expiry < C.todayKey()) askConfirm(`"${p.name}" এর মেয়াদ শেষ হয়ে গেছে। তবুও বিক্রি করবেন?`, go, { title: 'মেয়াদোত্তীর্ণ পণ্য', danger: true, yes: 'হ্যাঁ, যোগ করুন' });
+      if (p.expiry && p.expiry < C.todayKey()) askConfirm(`"${p.name}"  has expired. Sell anyway?`, go, { title: 'Expired product', danger: true, yes: 'Yes, add' });
       else go();
     },
     qty(id, d) {
       const it = DB.cart.find(c => c.id === id); if (!it) return;
       const p = findProduct(id); const n = it.qty + d;
       if (n <= 0) DB.cart = DB.cart.filter(c => c.id !== id);
-      else if (p && p.track !== false && n > p.stock) { toast('⚠️ স্টক অপর্যাপ্ত!'); return; }
+      else if (p && p.track !== false && n > p.stock) { toast('⚠️ Insufficient stock!'); return; }
       else it.qty = n;
       C.save('cart'); this.renderCart();
     },
     remove(id) { DB.cart = DB.cart.filter(c => c.id !== id); C.save('cart'); this.renderCart(); },
     editItem(id) {
       const it = DB.cart.find(c => c.id === id); if (!it) return;
-      const m = Modal.open({ title: it.name, body: `<div class="grid2"><div class="field"><label class="label">একক দাম (৳)</label><input id="ei-price" type="number" step="any" class="input" value="${it.price}"></div>
-        <div class="field"><label class="label">পরিমাণ</label><input id="ei-qty" type="number" step="any" class="input" value="${it.qty}"></div></div>`,
-        foot: `<button class="btn" onclick="Modal.closeFrom(this)">বাতিল</button><button class="btn btn-primary" id="ei-ok">সংরক্ষণ</button>` });
+      const m = Modal.open({ title: it.name, body: `<div class="grid2"><div class="field"><label class="label">Unit price</label><input id="ei-price" type="number" step="any" class="input" value="${it.price}"></div>
+        <div class="field"><label class="label">Qty</label><input id="ei-qty" type="number" step="any" class="input" value="${it.qty}"></div></div>`,
+        foot: `<button class="btn" onclick="Modal.closeFrom(this)">Cancel</button><button class="btn btn-primary" id="ei-ok">Save</button>` });
       m.querySelector('#ei-ok').onclick = () => {
         const pr = num($('ei-price').value), q = num($('ei-qty').value); const p = findProduct(id);
-        if (pr < 0 || q <= 0) { toast('⚠️ সঠিক মান দিন'); return; }
-        if (p && p.track !== false && q > p.stock) { toast('⚠️ স্টক মাত্র ' + p.stock); return; }
+        if (pr < 0 || q <= 0) { toast('⚠️ Enter a valid value'); return; }
+        if (p && p.track !== false && q > p.stock) { toast('⚠️ Stock only ' + p.stock); return; }
         it.price = pr; it.qty = q; C.save('cart'); Modal.close(m); this.renderCart();
       };
     },
     clear() {
       if (!DB.cart.length) return;
-      askConfirm('কার্টের সব পণ্য সরিয়ে ফেলবেন?', () => { DB.cart = []; this.resetBill(); C.save('cart'); this.renderCart(); toast('কার্ট খালি করা হয়েছে'); }, { title: 'কার্ট খালি করবেন?', yes: 'হ্যাঁ, খালি করুন', danger: true });
+      askConfirm('Clear all items from cart?', () => { DB.cart = []; this.resetBill(); C.save('cart'); this.renderCart(); toast('Cart cleared'); }, { title: 'Clear cart?', yes: 'Yes, clear', danger: true });
     },
     resetBill() { this.disc = 0; this.discType = 'percent'; this.customerId = null; this.note = ''; this.taxInit(); },
     cartHTML() {
@@ -242,18 +242,18 @@
           <div class="qty"><button onclick="POS.qty('${c.id}',-1)">−</button><span>${c.qty}</span><button onclick="POS.qty('${c.id}',1)">+</button></div>
           <div class="fw7 ptext sm" style="min-width:56px;text-align:right">${money(c.price * c.qty)}</div>
           <button class="icon-btn" style="width:28px;height:28px" onclick="POS.remove('${c.id}')"><i class="fas fa-xmark"></i></button></div>`).join('')
-        : '<div class="empty"><i class="fas fa-bag-shopping"></i>কার্ট খালি</div>';
-      return `<div class="flex between items-c mb3"><div class="sec-title" style="margin:0"><i class="fas fa-bag-shopping ptext cart-ico"></i> কার্ট <span class="badge b-p">${DB.cart.reduce((s, c) => s + c.qty, 0)}</span></div>
-          <div class="flex gap1"><button class="btn btn-sm btn-ghost" onclick="POS.hold()"><i class="fas fa-pause"></i> হোল্ড</button><button class="btn btn-sm btn-danger-soft" onclick="POS.clear()"><i class="fas fa-trash"></i></button></div></div>
+        : '<div class="empty"><i class="fas fa-bag-shopping"></i>Cart empty</div>';
+      return `<div class="flex between items-c mb3"><div class="sec-title" style="margin:0"><i class="fas fa-bag-shopping ptext cart-ico"></i> Cart <span class="badge b-p">${DB.cart.reduce((s, c) => s + c.qty, 0)}</span></div>
+          <div class="flex gap1"><button class="btn btn-sm btn-ghost" onclick="POS.hold()"><i class="fas fa-pause"></i> Hold</button><button class="btn btn-sm btn-danger-soft" onclick="POS.clear()"><i class="fas fa-trash"></i></button></div></div>
         <div style="max-height:38vh;overflow-y:auto;margin-bottom:10px">${items}</div>
-        <button class="btn btn-ghost btn-block mb3" onclick="POS.pickCust()"><i class="fas fa-user"></i> ${cust ? esc(cust.name) + (C.customerBalance(cust.id) > 0 ? ' · বাকি ' + money(C.customerBalance(cust.id)) : '') : 'ক্রেতা: ওয়াক-ইন (বাকির জন্য বাছাই করুন)'}</button>
-        <div class="grid2 mb2"><div><label class="label">ডিসকাউন্ট</label><div class="flex gap1"><input type="number" min="0" step="any" class="input" value="${this.disc || ''}" placeholder="0" oninput="POS.setDisc(this.value)"><select class="input" style="width:70px" onchange="POS.setDiscType(this.value)"><option value="percent" ${this.discType === 'percent' ? 'selected' : ''}>%</option><option value="amount" ${this.discType === 'amount' ? 'selected' : ''}>৳</option></select></div></div>
-          <div><label class="label">ট্যাক্স (%)</label><input type="number" min="0" step="any" class="input" value="${this.tax || ''}" placeholder="0" oninput="POS.setTax(this.value)"></div></div>
-        <div class="sumrow muted"><span>সাবটোটাল</span><span class="js-sub">${money(t.subtotal)}</span></div>
-        <div class="sumrow muted"><span>ডিসকাউন্ট</span><span class="js-disc bad">-${money(t.discount)}</span></div>
-        <div class="sumrow muted"><span>ট্যাক্স</span><span class="js-tax">${money(t.tax)}</span></div>
-        <div class="sumrow big"><span>মোট</span><span class="ptext js-total">${money(t.total)}</span></div>
-        <button class="btn btn-primary btn-block mt3" style="padding:14px;font-size:15px" ${DB.cart.length ? '' : 'disabled'} onclick="POS.checkout()"><i class="fas fa-circle-check"></i> চেকআউট</button>`;
+        <button class="btn btn-ghost btn-block mb3" onclick="POS.pickCust()"><i class="fas fa-user"></i> ${cust ? esc(cust.name) + (C.customerBalance(cust.id) > 0 ? ' · Due ' + money(C.customerBalance(cust.id)) : '') : 'Customer: Walk-in (select for due)'}</button>
+        <div class="grid2 mb2"><div><label class="label">Discount</label><div class="flex gap1"><input type="number" min="0" step="any" class="input" value="${this.disc || ''}" placeholder="0" oninput="POS.setDisc(this.value)"><select class="input" style="width:70px" onchange="POS.setDiscType(this.value)"><option value="percent" ${this.discType === 'percent' ? 'selected' : ''}>%</option><option value="amount" ${this.discType === 'amount' ? 'selected' : ''}>৳</option></select></div></div>
+          <div><label class="label">Tax (%)</label><input type="number" min="0" step="any" class="input" value="${this.tax || ''}" placeholder="0" oninput="POS.setTax(this.value)"></div></div>
+        <div class="sumrow muted"><span>Subtotal</span><span class="js-sub">${money(t.subtotal)}</span></div>
+        <div class="sumrow muted"><span>Discount</span><span class="js-disc bad">-${money(t.discount)}</span></div>
+        <div class="sumrow muted"><span>Tax</span><span class="js-tax">${money(t.tax)}</span></div>
+        <div class="sumrow big"><span>Total</span><span class="ptext js-total">${money(t.total)}</span></div>
+        <button class="btn btn-primary btn-block mt3" style="padding:14px;font-size:15px" ${DB.cart.length ? '' : 'disabled'} onclick="POS.checkout()"><i class="fas fa-circle-check"></i> Checkout</button>`;
     },
     renderCart() {
       const h = this.cartHTML(); ['cart-desk', 'cart-mobile'].forEach(id => { const e = $(id); if (e) e.innerHTML = h; });
@@ -264,8 +264,8 @@
       if (bar) {
         const t = this.totals(); bar.classList.toggle('empty', !n);
         bar.innerHTML = n
-          ? `<span class="cb-ico"><i class="fas fa-bag-shopping"></i><b class="cb-count">${n}</b></span><span class="cb-mid"><b>${n}টি আইটেম</b><small>কার্ট দেখতে ট্যাপ করুন</small></span><span class="cb-total">${money(t.total)}</span><i class="fas fa-chevron-up cb-arrow"></i>`
-          : `<span class="cb-ico"><i class="fas fa-bag-shopping"></i></span><span class="cb-mid"><b>কার্ট খালি</b><small>পণ্যে ট্যাপ করে যোগ করুন</small></span>`;
+          ? `<span class="cb-ico"><i class="fas fa-bag-shopping"></i><b class="cb-count">${n}</b></span><span class="cb-mid"><b>${n} items</b><small>Tap to view cart</small></span><span class="cb-total">${money(t.total)}</span><i class="fas fa-chevron-up cb-arrow"></i>`
+          : `<span class="cb-ico"><i class="fas fa-bag-shopping"></i></span><span class="cb-mid"><b>Cart empty</b><small>Tap a product to add</small></span>`;
       }
       this.markCards();
     },
@@ -275,63 +275,63 @@
     setTax(v) { this.tax = num(v); this.updTotals(); },
     pickCust() { People.pick(id => { this.customerId = id; this.renderCart(); }, true); },
 
-    // ---- হোল্ড ----
+    // ---- Hold ----
     hold() {
-      if (!DB.cart.length) { toast('কার্ট খালি'); return; }
+      if (!DB.cart.length) { toast('Cart empty'); return; }
       const c = findCustomer(this.customerId);
       DB.hold.unshift({ id: genId(), date: new Date().toISOString(), items: DB.cart, customerId: this.customerId, disc: this.disc, discType: this.discType, tax: this.tax, label: c ? c.name : '' });
-      C.save('hold'); DB.cart = []; this.resetBill(); C.save('cart'); this.renderCart(); this.renderGrid(); toast('বিল হোল্ড করা হয়েছে ✓');
+      C.save('hold'); DB.cart = []; this.resetBill(); C.save('cart'); this.renderCart(); this.renderGrid(); toast('Bill held ✓');
     },
     showHold() {
-      if (!DB.hold.length) { toast('কোনো হোল্ড করা বিল নেই'); return; }
-      const m = Modal.open({ title: 'হোল্ড করা বিল', body: DB.hold.map(h => `<div class="row" style="cursor:default"><div class="grow"><div class="t">${esc(h.label || 'ওয়াক-ইন')} · ${money(h.items.reduce((s, c) => s + c.price * c.qty, 0))}</div><div class="s">${C.fmtDT(h.date)} · ${h.items.length} আইটেম</div></div>
-        <button class="btn btn-sm btn-primary" onclick="POS.restore('${h.id}',this)">চালু</button><button class="btn btn-sm btn-danger-soft" onclick="POS.dropHold('${h.id}',this)"><i class="fas fa-trash"></i></button></div>`).join('') });
+      if (!DB.hold.length) { toast('No held bills'); return; }
+      const m = Modal.open({ title: 'Held Bills', body: DB.hold.map(h => `<div class="row" style="cursor:default"><div class="grow"><div class="t">${esc(h.label || 'Walk-in')} · ${money(h.items.reduce((s, c) => s + c.price * c.qty, 0))}</div><div class="s">${C.fmtDT(h.date)} · ${h.items.length} items</div></div>
+        <button class="btn btn-sm btn-primary" onclick="POS.restore('${h.id}',this)">Resume</button><button class="btn btn-sm btn-danger-soft" onclick="POS.dropHold('${h.id}',this)"><i class="fas fa-trash"></i></button></div>`).join('') });
       m._hold = true;
     },
     restore(id, btn) {
       const h = DB.hold.find(x => x.id === id); if (!h) return;
       const run = () => {
         DB.cart = h.items; this.customerId = h.customerId; this.disc = h.disc; this.discType = h.discType; this.tax = h.tax;
-        DB.hold = DB.hold.filter(x => x.id !== id); C.save('hold'); C.save('cart'); Modal.closeAll(); this.renderCart(); this.renderGrid(); toast('বিল চালু হয়েছে ✓');
+        DB.hold = DB.hold.filter(x => x.id !== id); C.save('hold'); C.save('cart'); Modal.closeAll(); this.renderCart(); this.renderGrid(); toast('Bill resumed ✓');
       };
-      if (DB.cart.length) askConfirm('বর্তমান কার্টের পণ্য বদলে যাবে। চালিয়ে যাবেন?', run, { yes: 'হ্যাঁ' }); else run();
+      if (DB.cart.length) askConfirm('Current cart items will be replaced. Continue?', run, { yes: 'Yes' }); else run();
     },
-    dropHold(id, btn) { askConfirm('এই হোল্ড করা বিল মুছে ফেলবেন?', () => { DB.hold = DB.hold.filter(x => x.id !== id); C.save('hold'); Modal.closeAll(); this.renderGrid(); toast('মুছে ফেলা হয়েছে'); }, { danger: true, yes: 'মুছুন' }); },
+    dropHold(id, btn) { askConfirm('Delete this held bill?', () => { DB.hold = DB.hold.filter(x => x.id !== id); C.save('hold'); Modal.closeAll(); this.renderGrid(); toast('Deleted'); }, { danger: true, yes: 'Delete' }); },
 
-    // ---- চেকআউট ----
+    // ---- Checkout ----
     checkout() {
       if (!DB.cart.length) return;
       App.closeDrawers(); this.payMethod = 'cash';
       const t = this.totals();
-      const m = Modal.open({ title: 'চেকআউট', body: `
-        <div class="tc mb3"><div class="muted xs">পরিশোধযোগ্য</div><div class="xxl fw7 ptext" id="co-total">${money(t.total)}</div></div>
+      const m = Modal.open({ title: 'Checkout', body: `
+        <div class="tc mb3"><div class="muted xs">Payable</div><div class="xxl fw7 ptext" id="co-total">${money(t.total)}</div></div>
         <div class="pay-opts mb3" id="co-methods">
-          <button class="pay-opt on" data-m="cash" onclick="POS.setMethod('cash')"><i class="fas fa-money-bill-wave"></i>নগদ</button>
-          <button class="pay-opt" data-m="card" onclick="POS.setMethod('card')"><i class="fas fa-credit-card"></i>কার্ড</button>
-          <button class="pay-opt" data-m="mobile" onclick="POS.setMethod('mobile')"><i class="fas fa-mobile-screen"></i>মোবাইল</button>
-          <button class="pay-opt" data-m="due" onclick="POS.setMethod('due')"><i class="fas fa-clock"></i>বাকি</button>
+          <button class="pay-opt on" data-m="cash" onclick="POS.setMethod('cash')"><i class="fas fa-money-bill-wave"></i>Cash</button>
+          <button class="pay-opt" data-m="card" onclick="POS.setMethod('card')"><i class="fas fa-credit-card"></i>Card</button>
+          <button class="pay-opt" data-m="mobile" onclick="POS.setMethod('mobile')"><i class="fas fa-mobile-screen"></i>Mobile</button>
+          <button class="pay-opt" data-m="due" onclick="POS.setMethod('due')"><i class="fas fa-clock"></i>Due</button>
         </div>
-        <div class="field"><label class="label" id="co-paid-label">প্রাপ্ত টাকা</label><input id="co-paid" type="number" step="any" min="0" class="input" style="font-size:18px;font-weight:700" oninput="POS.coCalc()"></div>
+        <div class="field"><label class="label" id="co-paid-label">Amount received</label><input id="co-paid" type="number" step="any" min="0" class="input" style="font-size:18px;font-weight:700" oninput="POS.coCalc()"></div>
         <div class="chips mb3" id="co-quick"></div>
         <div class="card pad-s mb3" id="co-info"></div>
         <button class="btn btn-ghost btn-block mb3" id="co-cust" onclick="POS.coPick()"></button>
-        <div class="field"><label class="label">নোট (ঐচ্ছিক)</label><input id="co-note" class="input" value="${esc(this.note)}" placeholder="যেমন: কাল দিবে"></div>`,
-        foot: `<button class="btn" onclick="Modal.closeFrom(this)">বাতিল</button><button class="btn btn-primary" id="co-ok" onclick="POS.complete()"><i class="fas fa-check"></i> বিক্রয় সম্পন্ন</button>` });
+        <div class="field"><label class="label">Note (optional)</label><input id="co-note" class="input" value="${esc(this.note)}" placeholder="e.g. pay tomorrow"></div>`,
+        foot: `<button class="btn" onclick="Modal.closeFrom(this)">Cancel</button><button class="btn btn-primary" id="co-ok" onclick="POS.complete()"><i class="fas fa-check"></i> Complete sale</button>` });
       this.setMethod('cash'); this.coCust();
     },
     coCust() {
       const b = $('co-cust'); if (!b) return; const c = findCustomer(this.customerId);
-      b.innerHTML = c ? `<i class="fas fa-user"></i> ${esc(c.name)} · বর্তমান বাকি ${money(Math.max(0, C.customerBalance(c.id)))}` : '<i class="fas fa-user-plus"></i> ক্রেতা বাছাই করুন (বাকি দিতে হলে আবশ্যক)';
+      b.innerHTML = c ? `<i class="fas fa-user"></i> ${esc(c.name)} · Current due ${money(Math.max(0, C.customerBalance(c.id)))}` : '<i class="fas fa-user-plus"></i> Select customer (required for due)';
     },
     coPick() { People.pick(id => { this.customerId = id; this.coCust(); this.renderCart(); this.coCalc(); }, true); },
     setMethod(m) {
       this.payMethod = m; const t = this.totals();
       document.querySelectorAll('#co-methods .pay-opt').forEach(b => b.classList.toggle('on', b.dataset.m === m));
-      $('co-paid-label').textContent = m === 'due' ? 'অগ্রিম জমা (ঐচ্ছিক)' : (m === 'cash' ? 'প্রাপ্ত টাকা' : 'পরিশোধ');
+      $('co-paid-label').textContent = m === 'due' ? 'Advance (Optional)' : (m === 'cash' ? 'Amount received' : 'Payment');
       $('co-paid').value = m === 'due' ? '' : t.total;
       const q = $('co-quick'); const opts = new Set([t.total]);
       if (m === 'cash') { [10, 50, 100, 500, 1000].forEach(s => { const v = Math.ceil(t.total / s) * s; if (v >= t.total) opts.add(v); }); }
-      q.innerHTML = m === 'due' ? '' : [...opts].slice(0, 5).map(v => `<button class="chip" onclick="document.getElementById('co-paid').value=${v};POS.coCalc()">${v === t.total ? 'সঠিক ' : ''}৳${fmt(v)}</button>`).join('');
+      q.innerHTML = m === 'due' ? '' : [...opts].slice(0, 5).map(v => `<button class="chip" onclick="document.getElementById('co-paid').value=${v};POS.coCalc()">${v === t.total ? 'Exact ' : ''}৳${fmt(v)}</button>`).join('');
       this.coCalc();
     },
     coCalc() {
@@ -339,16 +339,16 @@
       if (this.payMethod === 'cash') { if (raw > t.total) { change = r2(raw - t.total); paid = t.total; } }
       else if (raw > t.total) paid = t.total;
       const due = r2(Math.max(0, t.total - paid));
-      $('co-info').innerHTML = `<div class="sumrow" style="margin:2px 0"><span class="muted">জমা হচ্ছে</span><b>${money(paid)}</b></div>` +
-        (change > 0 ? `<div class="sumrow" style="margin:2px 0"><span class="muted">ফেরত দিন</span><b class="ok">${money(change)}</b></div>` : '') +
-        (due > 0 ? `<div class="sumrow" style="margin:2px 0"><span class="muted">বাকি থাকছে</span><b class="bad">${money(due)}</b></div>` : '');
+      $('co-info').innerHTML = `<div class="sumrow" style="margin:2px 0"><span class="muted">Paying</span><b>${money(paid)}</b></div>` +
+        (change > 0 ? `<div class="sumrow" style="margin:2px 0"><span class="muted">Change</span><b class="ok">${money(change)}</b></div>` : '') +
+        (due > 0 ? `<div class="sumrow" style="margin:2px 0"><span class="muted">Due remaining</span><b class="bad">${money(due)}</b></div>` : '');
       return { paid, change, due };
     },
     complete() {
       const t = this.totals(); const { paid, change, due } = this.coCalc();
       if (!DB.cart.length) return;
-      if (due > 0 && !this.customerId) { toast('⚠️ বাকি রাখতে ক্রেতা বাছাই করুন'); this.coPick(); return; }
-      for (const it of DB.cart) { const p = findProduct(it.id); if (p && p.track !== false && p.stock < it.qty) { toast('⚠️ ' + it.name + ' এর স্টক অপর্যাপ্ত!'); return; } }
+      if (due > 0 && !this.customerId) { toast('⚠️ Select a customer for due'); this.coPick(); return; }
+      for (const it of DB.cart) { const p = findProduct(it.id); if (p && p.track !== false && p.stock < it.qty) { toast('⚠️ ' + it.name + '  has insufficient stock!'); return; } }
       const cust = findCustomer(this.customerId);
       const proceed = () => {
         DB.cart.forEach(it => { const p = findProduct(it.id); if (p && p.track !== false) p.stock = r2(p.stock - it.qty); });
@@ -362,32 +362,32 @@
         DB.sales.unshift(sale); DB.cart = [];
         C.save('products'); C.save('sales'); C.save('cart'); C.save('settings');
         this.resetBill(); Modal.closeAll(); this.renderCart(); this.renderGrid();
-        Receipt.show(sale, { fresh: true }); toast('বিক্রয় সফল হয়েছে! ✓');
+        Receipt.show(sale, { fresh: true }); toast('Sale completed! ✓');
       };
       if (cust && due > 0) {
         const lim = num(cust.creditLimit); const after = C.customerBalance(cust.id) + due;
-        if (lim > 0 && after > lim) { askConfirm(`${cust.name}-এর বাকির সীমা ${money(lim)}। এই বিক্রয়ের পর বাকি হবে ${money(after)}। তবুও চালিয়ে যাবেন?`, proceed, { title: 'বাকির সীমা ছাড়াচ্ছে', danger: true, yes: 'হ্যাঁ, চালিয়ে যান' }); return; }
+        if (lim > 0 && after > lim) { askConfirm(`${cust.name}- due limit is ${money(lim)}. After this sale due will be ${money(after)}. Continue anyway?`, proceed, { title: 'Exceeds due limit', danger: true, yes: 'Yes, Continue' }); return; }
       }
       proceed();
     }
   };
   Views.pos = POS;
 
-  // ================= পণ্য ও স্টক =================
-  const UNITS = ['পিস', 'কেজি', 'গ্রাম', 'লিটার', 'প্যাকেট', 'বোতল', 'কাপ', 'ডজন', 'মিটার', 'বক্স', 'জোড়া'];
+  // ================= Products & Stock =================
+  const UNITS = ['Pcs', 'Kg', 'g', 'L', 'Packet', 'Bottle', 'Cup', 'Dozen', 'm', 'Box', 'Pair'];
   const Products = window.Products = {
     q: '', filter: 'all', img: null,
     render() {
       const low = DB.products.filter(p => p.track !== false && p.stock <= (p.minStock || 0)).length;
       $('view').innerHTML = `
-      <div class="page-head"><div><h2>পণ্য ও স্টক</h2><p>পণ্য যোগ, এডিট ও স্টক নিয়ন্ত্রণ</p></div>
-        <div class="flex gap2"><button class="btn btn-ghost" onclick="Products.csvMenu()"><i class="fas fa-file-csv"></i> CSV</button><button class="btn btn-primary" onclick="Products.edit()"><i class="fas fa-plus"></i> নতুন পণ্য</button></div></div>
-      <div class="stats"><div class="stat"><div class="k">মোট পণ্য</div><div class="v">${DB.products.length}</div></div>
-        <div class="stat"><div class="k">স্টক মূল্য (ক্রয়দামে)</div><div class="v">${money(C.stockValue())}</div></div>
-        <div class="stat"><div class="k">কম স্টক</div><div class="v ${low ? 'bad' : ''}">${low}</div></div>
-        <div class="stat"><div class="k">মেয়াদ সমস্যা</div><div class="v ${this.expiring().length ? 'warn' : ''}">${this.expiring().length}</div></div></div>
-      <div class="card pad-s mb3"><div class="relative mb2"><i class="fas fa-magnifying-glass search-ico"></i><input class="input has-ico" id="prod-q" placeholder="নাম, বারকোড বা ক্যাটাগরি..." value="${esc(this.q)}" oninput="Products.setQ(this.value)"></div>
-        <div class="chips">${[['all', 'সব'], ['low', 'কম স্টক'], ['out', 'স্টক শেষ'], ['exp', 'মেয়াদ সমস্যা']].map(f => `<button class="chip ${this.filter === f[0] ? 'on' : ''}" onclick="Products.setF('${f[0]}')">${f[1]}</button>`).join('')}</div></div>
+      <div class="page-head"><div><h2>Products & Stock</h2><p>Add products, edit & control stock</p></div>
+        <div class="flex gap2"><button class="btn btn-ghost" onclick="Products.csvMenu()"><i class="fas fa-file-csv"></i> CSV</button><button class="btn btn-primary" onclick="Products.edit()"><i class="fas fa-plus"></i> New Product</button></div></div>
+      <div class="stats"><div class="stat"><div class="k">Total Product</div><div class="v">${DB.products.length}</div></div>
+        <div class="stat"><div class="k">Stock value (at cost)</div><div class="v">${money(C.stockValue())}</div></div>
+        <div class="stat"><div class="k">Low Stock</div><div class="v ${low ? 'bad' : ''}">${low}</div></div>
+        <div class="stat"><div class="k">Expiry issue</div><div class="v ${this.expiring().length ? 'warn' : ''}">${this.expiring().length}</div></div></div>
+      <div class="card pad-s mb3"><div class="relative mb2"><i class="fas fa-magnifying-glass search-ico"></i><input class="input has-ico" id="prod-q" placeholder="Name, barcode or category..." value="${esc(this.q)}" oninput="Products.setQ(this.value)"></div>
+        <div class="chips">${[['all', 'All'], ['low', 'Low Stock'], ['out', 'Out of Stock'], ['exp', 'Expiry issue']].map(f => `<button class="chip ${this.filter === f[0] ? 'on' : ''}" onclick="Products.setF('${f[0]}')">${f[1]}</button>`).join('')}</div></div>
       <div class="card" id="prod-list"></div>`;
       this.list();
     },
@@ -401,87 +401,87 @@
       if (this.filter === 'exp') arr = arr.filter(p => p.expiry && p.expiry <= soon);
       arr.sort((a, b) => a.name.localeCompare(b.name, 'bn'));
       const el = $('prod-list'); if (!el) return;
-      if (!arr.length) { el.innerHTML = '<div class="empty"><i class="fas fa-box-open"></i>কোনো পণ্য নেই</div>'; return; }
+      if (!arr.length) { el.innerHTML = '<div class="empty"><i class="fas fa-box-open"></i>No products</div>'; return; }
       el.innerHTML = arr.slice(0, 300).map(p => {
         const low = p.track !== false && p.stock <= (p.minStock || 0);
-        const exp = p.expiry ? (p.expiry < C.todayKey() ? '<span class="badge b-bad">মেয়াদ শেষ</span>' : (p.expiry <= soon ? '<span class="badge b-warn">মেয়াদ ' + p.expiry + '</span>' : '')) : '';
+        const exp = p.expiry ? (p.expiry < C.todayKey() ? '<span class="badge b-bad">Expired</span>' : (p.expiry <= soon ? '<span class="badge b-warn">Expiry ' + p.expiry + '</span>' : '')) : '';
         return `<div class="row" onclick="Products.edit('${p.id}')">
           <div class="avatar" style="overflow:hidden">${p.image ? `<img src="${esc(p.image)}" style="width:100%;height:100%;object-fit:cover">` : '<i class="fas fa-box"></i>'}</div>
-          <div class="grow"><div class="t">${esc(p.name)} ${exp}</div><div class="s">${esc(p.category || 'ক্যাটাগরি নেই')}${p.barcode ? ' · ' + esc(p.barcode) : ''} · ক্রয় ${money(p.cost || 0)}</div></div>
-          <div class="tr"><div class="fw7 ptext">${money(p.price)}</div><div class="xs ${low ? 'bad fw6' : 'muted'}">${p.track === false ? 'স্টক ট্র্যাক নেই' : p.stock + ' ' + esc(p.unit || '')}</div></div>
+          <div class="grow"><div class="t">${esc(p.name)} ${exp}</div><div class="s">${esc(p.category || 'No category')}${p.barcode ? ' · ' + esc(p.barcode) : ''} · Purchases ${money(p.cost || 0)}</div></div>
+          <div class="tr"><div class="fw7 ptext">${money(p.price)}</div><div class="xs ${low ? 'bad fw6' : 'muted'}">${p.track === false ? 'Not tracked' : p.stock + ' ' + esc(p.unit || '')}</div></div>
           <button class="icon-btn" onclick="event.stopPropagation();Products.del('${p.id}')"><i class="fas fa-trash bad"></i></button></div>`;
-      }).join('') + (arr.length > 300 ? `<div class="empty">সার্চ করে বাকি পণ্য দেখুন (${arr.length - 300}টি আরও)</div>` : '');
+      }).join('') + (arr.length > 300 ? `<div class="empty">Search to see remaining products (${arr.length - 300} more)</div>` : '');
     },
     edit(id) {
       const p = id ? findProduct(id) : null; this.img = p ? (p.image || null) : null;
       const cats = [...new Set(DB.products.map(x => x.category).filter(Boolean))];
-      const m = Modal.open({ title: p ? 'পণ্য সম্পাদনা' : 'নতুন পণ্য', body: `
+      const m = Modal.open({ title: p ? 'Edit Product' : 'New Product', body: `
         <div class="flex gap3 mb3 items-c"><label style="cursor:pointer"><div class="avatar" id="pf-img" style="width:64px;height:64px;overflow:hidden">${this.img ? `<img src="${esc(this.img)}" style="width:100%;height:100%;object-fit:cover">` : '<i class="fas fa-camera"></i>'}</div><input type="file" accept="image/*" class="hidden" onchange="Products.pickImg(this)"></label>
-          <div class="grow"><label class="label">পণ্যের নাম *</label><input id="pf-name" class="input" autofocus value="${esc(p ? p.name : '')}"></div></div>
-        <div class="field"><label class="label">বারকোড</label><div class="flex gap2"><input id="pf-bc" class="input" value="${esc(p ? p.barcode : '')}" placeholder="স্ক্যান বা টাইপ করুন"><button class="btn btn-soft" onclick="Products.scanBC()"><i class="fas fa-barcode"></i></button></div></div>
-        <div class="grid2"><div class="field"><label class="label">ক্যাটাগরি</label><input id="pf-cat" class="input" list="pf-cats" value="${esc(p ? p.category : '')}"><datalist id="pf-cats">${cats.map(c => `<option value="${esc(c)}">`).join('')}</datalist></div>
-          <div class="field"><label class="label">একক</label><input id="pf-unit" class="input" list="pf-units" value="${esc(p ? p.unit : 'পিস')}"><datalist id="pf-units">${UNITS.map(u => `<option value="${u}">`).join('')}</datalist></div></div>
-        <div class="grid2"><div class="field"><label class="label">ক্রয়মূল্য (৳)</label><input id="pf-cost" type="number" step="any" min="0" class="input" value="${p ? p.cost || '' : ''}"></div>
-          <div class="field"><label class="label">বিক্রয়মূল্য (৳) *</label><input id="pf-price" type="number" step="any" min="0" class="input" value="${p ? p.price : ''}"></div></div>
-        <div class="grid2"><div class="field"><label class="label">বর্তমান স্টক</label><input id="pf-stock" type="number" step="any" class="input" value="${p ? p.stock : 0}"></div>
-          <div class="field"><label class="label">কম স্টক সীমা</label><input id="pf-min" type="number" step="any" min="0" class="input" value="${p ? (p.minStock === undefined ? 5 : p.minStock) : (DB.settings.lowStockDefault || 5)}"></div></div>
-        <div class="field"><label class="label">মেয়াদ শেষের তারিখ (ঐচ্ছিক)</label><input id="pf-exp" type="date" class="input" value="${esc(p ? p.expiry : '')}"></div>
-        <label class="switch"><span class="sm fw6">স্টক ট্র্যাক করুন <span class="muted xs">(সেবা/সীমাহীন পণ্যে বন্ধ করুন)</span></span><input type="checkbox" id="pf-track" ${!p || p.track !== false ? 'checked' : ''}></label>`,
-        foot: `<button class="btn" onclick="Modal.closeFrom(this)">বাতিল</button><button class="btn btn-primary" onclick="Products.save('${id || ''}',this)">সংরক্ষণ</button>` });
+          <div class="grow"><label class="label">Product name *</label><input id="pf-name" class="input" autofocus value="${esc(p ? p.name : '')}"></div></div>
+        <div class="field"><label class="label">Barcode</label><div class="flex gap2"><input id="pf-bc" class="input" value="${esc(p ? p.barcode : '')}" placeholder="Scan or type"><button class="btn btn-soft" onclick="Products.scanBC()"><i class="fas fa-barcode"></i></button></div></div>
+        <div class="grid2"><div class="field"><label class="label">Category</label><input id="pf-cat" class="input" list="pf-cats" value="${esc(p ? p.category : '')}"><datalist id="pf-cats">${cats.map(c => `<option value="${esc(c)}">`).join('')}</datalist></div>
+          <div class="field"><label class="label">Unit</label><input id="pf-unit" class="input" list="pf-units" value="${esc(p ? p.unit : 'Pcs')}"><datalist id="pf-units">${UNITS.map(u => `<option value="${u}">`).join('')}</datalist></div></div>
+        <div class="grid2"><div class="field"><label class="label">Cost price</label><input id="pf-cost" type="number" step="any" min="0" class="input" value="${p ? p.cost || '' : ''}"></div>
+          <div class="field"><label class="label">Sell price *</label><input id="pf-price" type="number" step="any" min="0" class="input" value="${p ? p.price : ''}"></div></div>
+        <div class="grid2"><div class="field"><label class="label">Current stock</label><input id="pf-stock" type="number" step="any" class="input" value="${p ? p.stock : 0}"></div>
+          <div class="field"><label class="label">Low stock limit</label><input id="pf-min" type="number" step="any" min="0" class="input" value="${p ? (p.minStock === undefined ? 5 : p.minStock) : (DB.settings.lowStockDefault || 5)}"></div></div>
+        <div class="field"><label class="label">Expiry date (optional)</label><input id="pf-exp" type="date" class="input" value="${esc(p ? p.expiry : '')}"></div>
+        <label class="switch"><span class="sm fw6">Track stock <span class="muted xs">(off for service/unlimited)</span></span><input type="checkbox" id="pf-track" ${!p || p.track !== false ? 'checked' : ''}></label>`,
+        foot: `<button class="btn" onclick="Modal.closeFrom(this)">Cancel</button><button class="btn btn-primary" onclick="Products.save('${id || ''}',this)">Save</button>` });
     },
     pickImg(input) {
       const f = input.files && input.files[0]; if (!f) return; const rd = new FileReader();
       rd.onload = e => { const im = new Image(); im.onload = () => { const r = Math.min(1, 400 / Math.max(im.width, im.height)); const c = document.createElement('canvas'); c.width = Math.round(im.width * r); c.height = Math.round(im.height * r); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); this.img = c.toDataURL('image/jpeg', .75); $('pf-img').innerHTML = `<img src="${this.img}" style="width:100%;height:100%;object-fit:cover">`; }; im.src = e.target.result; };
       rd.readAsDataURL(f);
     },
-    scanBC() { Scanner.open(code => { const f = $('pf-bc'); if (f) { f.value = code; toast('✓ বারকোড নেওয়া হয়েছে'); } }, { hint: 'পণ্যের বারকোড ধরুন' }); },
+    scanBC() { Scanner.open(code => { const f = $('pf-bc'); if (f) { f.value = code; toast('✓ Barcode captured'); } }, { hint: 'Hold product barcode' }); },
     save(id, btn) {
       const name = $('pf-name').value.trim(); const price = parseFloat($('pf-price').value);
-      if (!name) { toast('⚠️ পণ্যের নাম দিন'); return; } if (!isFinite(price) || price < 0) { toast('⚠️ সঠিক বিক্রয়মূল্য দিন'); return; }
+      if (!name) { toast('⚠️ Enter product name'); return; } if (!isFinite(price) || price < 0) { toast('⚠️ Enter a valid sell price'); return; }
       const bc = $('pf-bc').value.trim();
-      if (bc && DB.products.some(x => x.barcode === bc && x.id !== id)) { toast('⚠️ এই বারকোড অন্য পণ্যে আছে'); return; }
+      if (bc && DB.products.some(x => x.barcode === bc && x.id !== id)) { toast('⚠️ This barcode is used by another product'); return; }
       const old = id ? findProduct(id) : null;
-      const obj = { id: id || genId(), name, barcode: bc, category: $('pf-cat').value.trim(), unit: $('pf-unit').value.trim() || 'পিস', cost: Math.max(0, num($('pf-cost').value)), price,
+      const obj = { id: id || genId(), name, barcode: bc, category: $('pf-cat').value.trim(), unit: $('pf-unit').value.trim() || 'Pcs', cost: Math.max(0, num($('pf-cost').value)), price,
         stock: Math.max(0, num($('pf-stock').value)), minStock: Math.max(0, num($('pf-min').value)), expiry: $('pf-exp').value, track: $('pf-track').checked, image: this.img || null };
       if (old) Object.assign(old, obj); else DB.products.push(obj);
-      C.save('products'); Modal.closeFrom(btn); toast(old ? 'পণ্য আপডেট হয়েছে ✓' : 'নতুন পণ্য যোগ হয়েছে ✓'); App.refresh();
+      C.save('products'); Modal.closeFrom(btn); toast(old ? 'Product updated ✓' : 'New product added ✓'); App.refresh();
     },
     del(id) {
       const p = findProduct(id); if (!p) return;
-      askConfirm(`"${p.name}" মুছে ফেলবেন? বিক্রয় ইতিহাস অক্ষত থাকবে, কিন্তু পণ্যটি তালিকা থেকে চলে যাবে।`, () => {
-        DB.products = DB.products.filter(x => x.id !== id); DB.cart = DB.cart.filter(c => c.id !== id); C.save('products'); C.save('cart'); toast('পণ্য মুছে ফেলা হয়েছে'); App.refresh();
-      }, { title: 'পণ্য মুছবেন?', yes: 'হ্যাঁ, মুছুন', danger: true });
+      askConfirm(`"${p.name}" Delete? Sales history stays, but the product is removed from the list.`, () => {
+        DB.products = DB.products.filter(x => x.id !== id); DB.cart = DB.cart.filter(c => c.id !== id); C.save('products'); C.save('cart'); toast('Product Deleted'); App.refresh();
+      }, { title: 'Delete product?', yes: 'Yes, Delete', danger: true });
     },
     // ---- CSV ----
     csvMenu() {
-      Modal.open({ title: 'পণ্য CSV', body: `<p class="muted sm mb3">Excel/Google Sheet থেকে একসাথে অনেক পণ্য যোগ করতে পারবেন। কলাম: নাম, বারকোড, ক্যাটাগরি, ক্রয়মূল্য, বিক্রয়মূল্য, স্টক, একক, কম স্টক সীমা, মেয়াদ</p>
-        <button class="btn btn-ghost btn-block mb2" onclick="Products.csvOut()"><i class="fas fa-file-export"></i> সব পণ্য এক্সপোর্ট (CSV)</button>
-        <button class="btn btn-ghost btn-block mb2" onclick="Products.csvTemplate()"><i class="fas fa-file-lines"></i> খালি টেমপ্লেট ডাউনলোড</button>
-        <label class="btn btn-primary btn-block" style="cursor:pointer"><i class="fas fa-file-import"></i> CSV ইমপোর্ট<input type="file" accept=".csv,text/csv" class="hidden" onchange="Products.csvIn(this)"></label>` });
+      Modal.open({ title: 'Product CSV', body: `<p class="muted sm mb3">Import many products from Excel/Google Sheet. Columns: Name, Barcode, Category, Cost, Sell price, Stock, Unit, Low stock limit, Expiry</p>
+        <button class="btn btn-ghost btn-block mb2" onclick="Products.csvOut()"><i class="fas fa-file-export"></i> All Product Export (CSV)</button>
+        <button class="btn btn-ghost btn-block mb2" onclick="Products.csvTemplate()"><i class="fas fa-file-lines"></i> Download empty template</button>
+        <label class="btn btn-primary btn-block" style="cursor:pointer"><i class="fas fa-file-import"></i> CSV Import<input type="file" accept=".csv,text/csv" class="hidden" onchange="Products.csvIn(this)"></label>` });
     },
-    head: ['নাম', 'বারকোড', 'ক্যাটাগরি', 'ক্রয়মূল্য', 'বিক্রয়মূল্য', 'স্টক', 'একক', 'কম স্টক সীমা', 'মেয়াদ'],
+    head: ['Name', 'Barcode', 'Category', 'Cost', 'Sell price', 'Stock', 'Unit', 'Low stock limit', 'Expiry'],
     csvOut() { C.download('propos-products.csv', C.toCSV([this.head, ...DB.products.map(p => [p.name, p.barcode, p.category, p.cost, p.price, p.stock, p.unit, p.minStock, p.expiry])]), 'text/csv'); },
-    csvTemplate() { C.download('propos-products-template.csv', C.toCSV([this.head, ['চা', '8901001', 'পানীয়', 5, 10, 100, 'কাপ', 20, '']]), 'text/csv'); },
+    csvTemplate() { C.download('propos-products-template.csv', C.toCSV([this.head, ['Tea', '8901001', 'Beverages', 5, 10, 100, 'Cup', 20, '']]), 'text/csv'); },
     csvIn(input) {
       const f = input.files && input.files[0]; input.value = ''; if (!f) return; const rd = new FileReader();
       rd.onload = e => {
-        let rows = C.parseCSV(e.target.result); if (!rows.length) { toast('⚠️ ফাইল খালি'); return; }
-        if (/^\s*(নাম|name)\s*$/i.test(rows[0][0] || '')) rows = rows.slice(1);
+        let rows = C.parseCSV(e.target.result); if (!rows.length) { toast('⚠️ File is empty'); return; }
+        if (/^\s*(Name|name)\s*$/i.test(rows[0][0] || '')) rows = rows.slice(1);
         let add = 0, upd = 0, bad = 0;
         rows.forEach(r => {
           const name = (r[0] || '').trim(); const price = parseFloat(r[4]); if (!name || !isFinite(price)) { bad++; return; }
           const bc = (r[1] || '').trim(); let p = (bc && DB.products.find(x => x.barcode === bc)) || DB.products.find(x => x.name === name);
-          const data = { name, barcode: bc, category: (r[2] || '').trim(), cost: num(r[3]), price, stock: num(r[5]), unit: (r[6] || '').trim() || 'পিস', minStock: r[7] === undefined || r[7] === '' ? 5 : num(r[7]), expiry: (r[8] || '').trim() };
+          const data = { name, barcode: bc, category: (r[2] || '').trim(), cost: num(r[3]), price, stock: num(r[5]), unit: (r[6] || '').trim() || 'Pcs', minStock: r[7] === undefined || r[7] === '' ? 5 : num(r[7]), expiry: (r[8] || '').trim() };
           if (p) { Object.assign(p, data); upd++; } else { DB.products.push(Object.assign({ id: genId(), track: true, image: null }, data)); add++; }
         });
-        C.save('products'); Modal.closeAll(); toast(`✓ ${add}টি নতুন, ${upd}টি আপডেট${bad ? ', ' + bad + 'টি বাদ' : ''}`); App.refresh();
+        C.save('products'); Modal.closeAll(); toast(`✓ ${add} new, ${upd} updated${bad ? ', ' + bad + ' excluded' : ''}`); App.refresh();
       };
       rd.readAsText(f);
     }
   };
   Views.products = Products;
 
-  // ================= চালু =================
+  // ================= Resume =================
   document.addEventListener('DOMContentLoaded', () => {
     C.load(); POS.taxInit(); buildNav();
     const start = () => { App.go('pos'); checkPendingBackup(); POS.renderCart(); if (window.Cloud) Cloud.init(); };

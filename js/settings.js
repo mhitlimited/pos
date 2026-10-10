@@ -1,29 +1,29 @@
-/* ProPOS: সেটিংস, বারকোড স্ক্যানার, PIN লক, ব্লুটুথ প্রিন্টার */
+/* ProPOS: Settings, Barcode scanার, PIN lock, Bluetooth printer */
 (function () {
   'use strict';
   const C = Core, { DB, esc, num, money, fmt, toast } = C;
   const $ = id => document.getElementById(id);
 
-  // ================= বারকোড স্ক্যানার (ক্যামেরা) =================
-  // cb(code) false ফেরত দিলে ক্যামেরা খোলা থাকে (যেমন বারকোড মেলেনি); অন্যথায় non-continuous মোডে স্ক্যান হওয়ার সাথে সাথে বন্ধ হয়।
+  // ================= Barcode scanার (ক্যামেরা) =================
+  // cb(code) false Returns দিলে ক্যামেরা খোলা থাকে (যেমন Barcode মেলেনি); অন্যথায় non-continuous মোডে স্ক্যান হওয়ার সাথে সাথে Close হয়।
   const Scanner = window.Scanner = {
     el: null, stream: null, timer: null, last: '', lastT: 0, busy: false, opening: false, tok: 0, msgT: null,
     isOpen() { return !!this.el || this.opening; },
     async open(cb, o) {
       o = o || {};
       if (this.el || this.opening) return;
-      if (!('BarcodeDetector' in window)) { toast('⚠️ এই ব্রাউজারে ক্যামেরা স্ক্যান নেই। USB/ব্লুটুথ স্ক্যানার বা টাইপ করুন।'); return; }
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('⚠️ ক্যামেরা পাওয়া যায়নি (HTTPS দরকার)'); return; }
-      let det; try { det = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf', 'qr_code'] }); } catch (_) { try { det = new BarcodeDetector(); } catch (e2) { toast('⚠️ এই ব্রাউজারে ক্যামেরা স্ক্যান নেই'); return; } }
+      if (!('BarcodeDetector' in window)) { toast('⚠️ Camera scan not available in this browser। Use USB/Bluetooth scanner or type.'); return; }
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('⚠️ Camera not available (HTTPS required)'); return; }
+      let det; try { det = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf', 'qr_code'] }); } catch (_) { try { det = new BarcodeDetector(); } catch (e2) { toast('⚠️ Camera scan not available in this browser'); return; } }
       const tok = ++this.tok; this.opening = true;
       let stream;
       try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false }); }
-      catch (e) { this.opening = false; toast(e && e.name === 'NotFoundError' ? '⚠️ ডিভাইসে ক্যামেরা পাওয়া যায়নি' : '⚠️ ক্যামেরার অনুমতি দেওয়া হয়নি'); return; }
+      catch (e) { this.opening = false; toast(e && e.name === 'NotFoundError' ? '⚠️ No camera found on device' : '⚠️ Camera permission denied'); return; }
       this.opening = false;
-      if (tok !== this.tok) { stream.getTracks().forEach(t => t.stop()); return; }   // খোলার মাঝে Back/বন্ধ চাপা হয়েছে
+      if (tok !== this.tok) { stream.getTracks().forEach(t => t.stop()); return; }   // খোলার মাঝে Back/Close Teaপা হয়েছে
       this.stream = stream;
       const el = document.createElement('div'); el.className = 'scan';
-      el.innerHTML = `<video playsinline muted autoplay></video><div class="frame"></div><div class="bar-top"><b>বারকোড স্ক্যান</b><button type="button" class="btn btn-sm" id="sc-x">বন্ধ করুন</button></div><div class="sc-msg hidden" id="sc-msg"></div><div class="bar-bot">${esc(o.hint || 'বারকোড ফ্রেমের ভেতরে ধরুন')}</div>`;
+      el.innerHTML = `<video playsinline muted autoplay></video><div class="frame"></div><div class="bar-top"><b>Barcode scan</b><button type="button" class="btn btn-sm" id="sc-x">Close</button></div><div class="sc-msg hidden" id="sc-msg"></div><div class="bar-bot">${esc(o.hint || 'Hold barcode inside the frame')}</div>`;
       document.body.appendChild(el); this.el = el; this.last = ''; this.lastT = 0; this.busy = false; syncLock();
       const v = el.querySelector('video'); v.srcObject = stream; try { await v.play(); } catch (_) {}
       el.querySelector('#sc-x').onclick = () => this.close();
@@ -42,7 +42,7 @@
         } catch (_) {} finally { this.busy = false; }
       }, 220);
     },
-    // ক্যামেরা স্ক্রিনের ওপরেই বার্তা দেখায় (toast ক্যামেরার নিচে ঢাকা পড়ে যেত)
+    // ক্যামেরা স্ক্রিনের ওLaterই বার্তা দেখায় (toast ক্যামেরার নিচে ঢাকা পড়ে যেত)
     flash(msg, kind) {
       const m = this.el && this.el.querySelector('#sc-msg'); if (!m) { toast(msg); return; }
       m.textContent = msg; m.className = 'sc-msg ' + (kind || '');
@@ -58,7 +58,7 @@
   // অ্যাপ ব্যাকগ্রাউন্ডে গেলে ক্যামেরা ছেড়ে দিন
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && Scanner.isOpen()) Scanner.close(); });
 
-  // ================= PIN লক =================
+  // ================= PIN lock =================
   async function hashPin(pin, salt) {
     const s = salt + ':' + pin;
     if (window.crypto && crypto.subtle) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)); return Array.from(new Uint8Array(b)).map(x => x.toString(16).padStart(2, '0')).join(''); }
@@ -68,70 +68,70 @@
     hiddenAt: 0, el: null, fails: 0, until: 0,
     has() { return !!DB.settings.pinHash; },
     init(start) { if (this.has()) this.show(start); else start(); },
-    lockNow() { if (!this.has()) { toast('আগে সেটিংসে PIN সেট করুন'); return; } this.show(() => {}); },
+    lockNow() { if (!this.has()) { toast('Set PIN in Settings first'); return; } this.show(() => {}); },
     onHide() { this.hiddenAt = Date.now(); },
     onResume() { if (this.has() && !this.el && this.hiddenAt && Date.now() - this.hiddenAt > 60000) this.show(() => {}); },
     show(done) {
       if (this.el) return; let pin = '';
       const el = document.createElement('div'); el.className = 'lock';
-      el.innerHTML = `<div class="logo" style="width:64px;height:64px;font-size:28px;background:rgba(255,255,255,.2)"><i class="fas fa-lock"></i></div><h2>${esc(DB.settings.shopName)}</h2><p>PIN দিয়ে আনলক করুন</p><div class="dots" id="lk-dots"><i></i><i></i><i></i><i></i></div>
+      el.innerHTML = `<div class="logo" style="width:64px;height:64px;font-size:28px;background:rgba(255,255,255,.2)"><i class="fas fa-lock"></i></div><h2>${esc(DB.settings.shopName)}</h2><p>Unlock with PIN</p><div class="dots" id="lk-dots"><i></i><i></i><i></i><i></i></div>
         <div class="keypad">${[1, 2, 3, 4, 5, 6, 7, 8, 9, '', 0, '⌫'].map(k => k === '' ? '<span></span>' : `<button type="button" data-k="${k}">${k}</button>`).join('')}</div>
-        <button type="button" id="lk-forgot" style="margin-top:26px;background:none;border:0;color:#fff;opacity:.7;font-size:13px;cursor:pointer;text-decoration:underline">PIN ভুলে গেছেন?</button>`;
+        <button type="button" id="lk-forgot" style="margin-top:26px;background:none;border:0;color:#fff;opacity:.7;font-size:13px;cursor:pointer;text-decoration:underline">Forgot PIN?</button>`;
       document.body.appendChild(el); this.el = el; syncLock();
       const dots = el.querySelectorAll('#lk-dots i');
       const paint = () => dots.forEach((d, i) => d.classList.toggle('f', i < pin.length));
       el.querySelectorAll('[data-k]').forEach(b => b.onclick = async () => {
         const k = b.dataset.k; if (k === '⌫') pin = pin.slice(0, -1); else if (pin.length < 4) pin += k; paint();
         if (pin.length === 4) {
-          if (Date.now() < this.until) { toast('⚠️ বেশি ভুল হয়েছে — ' + Math.ceil((this.until - Date.now()) / 1000) + ' সেকেন্ড পরে চেষ্টা করুন'); pin = ''; paint(); return; }
+          if (Date.now() < this.until) { toast('⚠️ Too many wrong attempts — ' + Math.ceil((this.until - Date.now()) / 1000) + ' seconds, try later'); pin = ''; paint(); return; }
           const h = await hashPin(pin, DB.settings.pinSalt);
           if (h === DB.settings.pinHash) { this.fails = 0; el.remove(); this.el = null; syncLock(); done && done(); }
           else {
-            if (++this.fails >= 5) { this.until = Date.now() + 30000; this.fails = 0; toast('⚠️ ৫ বার ভুল — ৩০ সেকেন্ড অপেক্ষা করুন'); }
+            if (++this.fails >= 5) { this.until = Date.now() + 30000; this.fails = 0; toast('⚠️ Too many wrong attempts — wait 30 seconds'); }
             const d = el.querySelector('#lk-dots'); d.classList.add('shake'); if (navigator.vibrate) navigator.vibrate(120); setTimeout(() => { d.classList.remove('shake'); pin = ''; paint(); }, 450);
           }
         }
       });
-      el.querySelector('#lk-forgot').onclick = () => askConfirm('PIN ভুলে গেলে একমাত্র উপায় সব ডেটা মুছে নতুন করে শুরু করা (মুছার আগে ব্যাকআপ ফাইল ডাউনলোড হবে, পরে রিস্টোর করা যাবে)। করবেন?', () => { wipeAllData(); }, { danger: true, yes: 'ডেটা মুছে রিসেট', title: 'PIN রিসেট' });
+      el.querySelector('#lk-forgot').onclick = () => askConfirm('If you forget the PIN, the only way is to wipe all data and start over. Continue?', () => { wipeAllData(); }, { danger: true, yes: 'Wipe & Reset Data', title: 'Reset PIN' });
     },
     setup() {
       const has = this.has();
-      const m = Modal.open({ title: has ? 'PIN পরিবর্তন' : 'PIN সেট করুন', body: `${has ? '<div class="field"><label class="label">বর্তমান PIN</label><input id="pn-old" type="password" inputmode="numeric" maxlength="4" class="input"></div>' : ''}
-        <div class="field"><label class="label">নতুন PIN (৪ সংখ্যা)</label><input id="pn-new" type="password" inputmode="numeric" maxlength="4" class="input" ${has ? '' : 'autofocus'}></div>
-        <div class="field"><label class="label">আবার লিখুন</label><input id="pn-new2" type="password" inputmode="numeric" maxlength="4" class="input"></div>
-        <p class="xs muted">⚠️ PIN ভুলে গেলে ডেটা রিসেট করতে হবে — তাই নিয়মিত ব্যাকআপ রাখুন।</p>`, foot: `<button class="btn" onclick="Modal.closeFrom(this)">বাতিল</button><button class="btn btn-primary" id="pn-ok">সংরক্ষণ</button>` });
+      const m = Modal.open({ title: has ? 'Change PIN' : 'Set PIN', body: `${has ? '<div class="field"><label class="label">Current PIN</label><input id="pn-old" type="password" inputmode="numeric" maxlength="4" class="input"></div>' : ''}
+        <div class="field"><label class="label">New PIN (4 digits)</label><input id="pn-new" type="password" inputmode="numeric" maxlength="4" class="input" ${has ? '' : 'autofocus'}></div>
+        <div class="field"><label class="label">Re-enter</label><input id="pn-new2" type="password" inputmode="numeric" maxlength="4" class="input"></div>
+        <p class="xs muted">⚠️ If you forget the PIN you must reset data — keep cloud backup enabled.</p>`, foot: `<button class="btn" onclick="Modal.closeFrom(this)">Cancel</button><button class="btn btn-primary" id="pn-ok">Save</button>` });
       m.querySelector('#pn-ok').onclick = async () => {
-        if (has && (await hashPin($('pn-old').value, DB.settings.pinSalt)) !== DB.settings.pinHash) { toast('⚠️ বর্তমান PIN ভুল'); return; }
-        const a = $('pn-new').value, b = $('pn-new2').value; if (!/^\d{4}$/.test(a)) { toast('⚠️ ঠিক ৪টি সংখ্যা দিন'); return; } if (a !== b) { toast('⚠️ দুটি PIN মেলেনি'); return; }
-        const salt = C.genId(); DB.settings.pinSalt = salt; DB.settings.pinHash = await hashPin(a, salt); C.save('settings'); Modal.close(m); toast('PIN সেট হয়েছে ✓'); App.refresh();
+        if (has && (await hashPin($('pn-old').value, DB.settings.pinSalt)) !== DB.settings.pinHash) { toast('⚠️ Current PIN is wrong'); return; }
+        const a = $('pn-new').value, b = $('pn-new2').value; if (!/^\d{4}$/.test(a)) { toast('⚠️ Enter exactly 4 digits'); return; } if (a !== b) { toast('⚠️ PINs do not match'); return; }
+        const salt = C.genId(); DB.settings.pinSalt = salt; DB.settings.pinHash = await hashPin(a, salt); C.save('settings'); Modal.close(m); toast('PIN set ✓'); App.refresh();
       };
     },
     remove() {
-      const m = Modal.open({ title: 'PIN বন্ধ করুন', body: '<div class="field"><label class="label">বর্তমান PIN</label><input id="pn-old" type="password" inputmode="numeric" maxlength="4" class="input" autofocus></div>', foot: `<button class="btn" onclick="Modal.closeFrom(this)">বাতিল</button><button class="btn btn-bad" id="pn-ok">PIN বন্ধ করুন</button>` });
-      m.querySelector('#pn-ok').onclick = async () => { if ((await hashPin($('pn-old').value, DB.settings.pinSalt)) !== DB.settings.pinHash) { toast('⚠️ PIN ভুল'); return; } DB.settings.pinHash = ''; DB.settings.pinSalt = ''; C.save('settings'); Modal.close(m); toast('PIN বন্ধ করা হয়েছে'); App.refresh(); };
+      const m = Modal.open({ title: 'Disable PIN', body: '<div class="field"><label class="label">Current PIN</label><input id="pn-old" type="password" inputmode="numeric" maxlength="4" class="input" autofocus></div>', foot: `<button class="btn" onclick="Modal.closeFrom(this)">Cancel</button><button class="btn btn-bad" id="pn-ok">Disable PIN</button>` });
+      m.querySelector('#pn-ok').onclick = async () => { if ((await hashPin($('pn-old').value, DB.settings.pinSalt)) !== DB.settings.pinHash) { toast('⚠️ Wrong PIN'); return; } DB.settings.pinHash = ''; DB.settings.pinSalt = ''; C.save('settings'); Modal.close(m); toast('PIN disabled'); App.refresh(); };
     }
   };
 
-  // ================= ব্লুটুথ প্রিন্টার =================
+  // ================= Bluetooth printer =================
   const SERVICES = ['000018f0-0000-1000-8000-00805f9b34fb', '49535343-fe7d-4ae5-8fa9-9fafd205e455', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2', '0000ff00-0000-1000-8000-00805f9b34fb', '0000ffe0-0000-1000-8000-00805f9b34fb', '0000ffb0-0000-1000-8000-00805f9b34fb'];
   const Printer = window.Printer = {
     dev: null, ch: null, name: '',
     isConnected() { return !!(this.ch && this.dev && this.dev.gatt && this.dev.gatt.connected); },
     ui() {
-      const ok = this.isConnected(); const s = $('bt-status'); if (s) s.innerHTML = ok ? `<span class="badge b-ok">● সংযুক্ত: ${esc(this.name)}</span>` : '<span class="badge">● সংযুক্ত নয়</span>';
+      const ok = this.isConnected(); const s = $('bt-status'); if (s) s.innerHTML = ok ? `<span class="badge b-ok">● Connected: ${esc(this.name)}</span>` : '<span class="badge">● Not connected</span>';
       const c = $('bt-conn'), d = $('bt-disc'); if (c) c.classList.toggle('hidden', ok); if (d) d.classList.toggle('hidden', !ok);
     },
     async connect() {
-      if (!navigator.bluetooth) { toast('⚠️ Web Bluetooth নেই। Android Chrome/Edge ব্যবহার করুন।'); return false; }
+      if (!navigator.bluetooth) { toast('⚠️ Web Bluetooth not available. Use Android Chrome/Edge.'); return false; }
       try {
-        toast('প্রিন্টার খোঁজা হচ্ছে...');
+        toast('Searching for printer...');
         this.dev = await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: SERVICES });
-        this.dev.addEventListener('gattserverdisconnected', () => { this.ch = null; this.ui(); toast('প্রিন্টার বিচ্ছিন্ন হয়েছে'); });
+        this.dev.addEventListener('gattserverdisconnected', () => { this.ch = null; this.ui(); toast('Printer disconnected'); });
         const server = await this.dev.gatt.connect(); const services = await server.getPrimaryServices(); let found = null;
         for (const sv of services) { const cs = await sv.getCharacteristics(); for (const c of cs) { if (c.properties.write || c.properties.writeWithoutResponse) { found = c; break; } } if (found) break; }
-        if (!found) throw new Error('প্রিন্টারে লেখার চ্যানেল পাওয়া যায়নি');
-        this.ch = found; this.name = this.dev.name || 'প্রিন্টার'; this.ui(); toast('প্রিন্টার সংযুক্ত ✓'); return true;
-      } catch (e) { console.error(e); toast(e.name === 'NotFoundError' ? 'কোনো ডিভাইস বাছাই করা হয়নি' : '⚠️ সংযোগ ব্যর্থ: ' + (e.message || '')); this.ch = null; this.ui(); return false; }
+        if (!found) throw new Error('Printer write channel not available');
+        this.ch = found; this.name = this.dev.name || 'Printer'; this.ui(); toast('Printer connected ✓'); return true;
+      } catch (e) { console.error(e); toast(e.name === 'NotFoundError' ? 'No device selected' : '⚠️ Connection failed: ' + (e.message || '')); this.ch = null; this.ui(); return false; }
     },
     disconnect() { try { if (this.dev && this.dev.gatt.connected) this.dev.gatt.disconnect(); } catch (_) {} this.ch = null; this.ui(); },
     async write(bytes) {
@@ -145,23 +145,23 @@
     async print(sale) {
       if (!sale) return;
       if (!this.isConnected()) { const ok = await this.connect(); if (!ok) return; }
-      try { toast('প্রিন্ট হচ্ছে...'); const data = DB.settings.btMode === 'text' ? this.textJob(sale) : await this.imageJob(sale); await this.write(data); toast('প্রিন্ট সম্পন্ন ✓'); }
-      catch (e) { console.error(e); toast('⚠️ প্রিন্ট ব্যর্থ: ' + (e.message || 'ত্রুটি')); }
+      try { toast('Printing...'); const data = DB.settings.btMode === 'text' ? this.textJob(sale) : await this.imageJob(sale); await this.write(data); toast('Print done ✓'); }
+      catch (e) { console.error(e); toast('⚠️ Print failed: ' + (e.message || 'Error')); }
     },
-    // ---- ছবি মোড (বাংলা সহ) ----
+    // ---- Image মোড (বাংলা সহ) ----
     lines(s) {
       const sh = DB.settings; const cust = C.findCustomer(s.customerId); const bal = cust ? C.customerBalance(cust.id) : 0; const L = [];
-      const MN = { cash: 'নগদ', card: 'কার্ড', mobile: 'মোবাইল', due: 'বাকি' };
+      const MN = { cash: 'Cash', card: 'Card', mobile: 'Mobile', due: 'Due' };
       L.push({ t: sh.shopName || 'ProPOS', a: 'c', b: 1, s: 28 });
-      if (sh.shopAddress) L.push({ t: sh.shopAddress, a: 'c', s: 20 }); if (sh.shopPhone) L.push({ t: 'ফোন: ' + sh.shopPhone, a: 'c', s: 20 });
-      L.push({ hr: 1 }, { t: 'রসিদ নং', t2: '#' + C.invLabel(s), s: 21 }, { t: 'তারিখ', t2: C.fmtDT(s.date), s: 21 });
-      if (cust) L.push({ t: 'ক্রেতা', t2: cust.name, s: 21 }); L.push({ t: 'পেমেন্ট', t2: MN[s.paymentMethod] || '', s: 21 }, { hr: 1 });
+      if (sh.shopAddress) L.push({ t: sh.shopAddress, a: 'c', s: 20 }); if (sh.shopPhone) L.push({ t: 'Phone: ' + sh.shopPhone, a: 'c', s: 20 });
+      L.push({ hr: 1 }, { t: 'Receipt #', t2: '#' + C.invLabel(s), s: 21 }, { t: 'Date', t2: C.fmtDT(s.date), s: 21 });
+      if (cust) L.push({ t: 'Customer', t2: cust.name, s: 21 }); L.push({ t: 'Payment', t2: MN[s.paymentMethod] || '', s: 21 }, { hr: 1 });
       s.items.forEach(i => { L.push({ t: i.name, s: 22, b: 1 }); L.push({ t: i.qty + ' × ' + fmt(i.price), t2: fmt(i.price * i.qty), s: 21 }); });
-      L.push({ hr: 1 }, { t: 'সাবটোটাল', t2: fmt(s.subtotal), s: 21 });
-      if (s.discount > 0) L.push({ t: 'ডিসকাউন্ট', t2: '-' + fmt(s.discount), s: 21 }); if (s.tax > 0) L.push({ t: 'ট্যাক্স', t2: fmt(s.tax), s: 21 });
-      L.push({ t: 'মোট', t2: '৳' + fmt(s.total), s: 28, b: 1 }, { t: 'জমা', t2: fmt(s.paid), s: 21 });
-      if (s.change > 0) L.push({ t: 'ফেরত দেওয়া', t2: fmt(s.change), s: 21 }); if (s.due > 0) L.push({ t: 'এই বিলে বাকি', t2: fmt(s.due), s: 23, b: 1 });
-      if (cust && bal > 0) L.push({ t: 'মোট বাকি', t2: fmt(bal), s: 23, b: 1 });
+      L.push({ hr: 1 }, { t: 'Subtotal', t2: fmt(s.subtotal), s: 21 });
+      if (s.discount > 0) L.push({ t: 'Discount', t2: '-' + fmt(s.discount), s: 21 }); if (s.tax > 0) L.push({ t: 'Tax', t2: fmt(s.tax), s: 21 });
+      L.push({ t: 'Total', t2: '৳' + fmt(s.total), s: 28, b: 1 }, { t: 'Paid', t2: fmt(s.paid), s: 21 });
+      if (s.change > 0) L.push({ t: 'Change given', t2: fmt(s.change), s: 21 }); if (s.due > 0) L.push({ t: 'Due on this bill', t2: fmt(s.due), s: 23, b: 1 });
+      if (cust && bal > 0) L.push({ t: 'Total Due', t2: fmt(bal), s: 23, b: 1 });
       L.push({ hr: 1 }, { t: sh.footer || '', a: 'c', s: 20 }, { gap: 40 });
       return L;
     },
@@ -201,42 +201,42 @@
     }
   };
 
-  // ================= সেটিংস =================
+  // ================= Settings =================
   App.Views.settings = {
     render() {
       const s = DB.settings; let bytes = 0; try { Object.keys(localStorage).forEach(k => { bytes += (k.length + (localStorage.getItem(k) || '').length) * 2; }); } catch (_) {}
       const kb = Math.round(bytes / 1024); const last = parseInt(localStorage.getItem('propos_last_backup') || '0', 10);
-      $('view').innerHTML = `<div class="page-head"><div><h2>সেটিংস</h2><p>দোকান, চেহারা, নিরাপত্তা, প্রিন্টার ও ডেটা</p></div></div>
-      <div class="card pad mb3"><div class="sec-title"><i class="fas fa-store ptext"></i> দোকানের তথ্য</div>
-        <div class="field"><label class="label">দোকানের নাম</label><input id="st-name" class="input" value="${esc(s.shopName)}"></div>
-        <div class="field"><label class="label">ঠিকানা</label><input id="st-addr" class="input" value="${esc(s.shopAddress)}"></div>
-        <div class="grid2"><div class="field"><label class="label">ফোন</label><input id="st-phone" class="input" value="${esc(s.shopPhone)}"></div><div class="field"><label class="label">ডিফল্ট ট্যাক্স (%)</label><input id="st-tax" type="number" step="any" min="0" class="input" value="${s.defaultTax || 0}"></div></div>
-        <div class="field"><label class="label">রসিদের নিচের লেখা</label><input id="st-foot" class="input" value="${esc(s.footer)}"></div>
-        <div class="grid3"><div class="field"><label class="label">রসিদ নম্বরের আগে</label><input id="st-pre" class="input" value="${esc(s.invPrefix)}" placeholder="INV-"></div><div class="field"><label class="label">কাগজ</label><select id="st-paper" class="input"><option value="58" ${s.paper === '58' ? 'selected' : ''}>৫৮ মিমি</option><option value="80" ${s.paper === '80' ? 'selected' : ''}>৮০ মিমি</option></select></div><div class="field"><label class="label">কম স্টক (ডিফল্ট)</label><input id="st-low" type="number" min="0" class="input" value="${s.lowStockDefault || 5}"></div></div>
-        <button class="btn btn-primary btn-block" onclick="Settings.save()"><i class="fas fa-floppy-disk"></i> সংরক্ষণ</button></div>
-      <div class="card pad mb3"><div class="sec-title"><i class="fas fa-palette ptext"></i> চেহারা ও সাউন্ড</div>
-        <div class="field"><label class="label">থিম</label><select id="theme-select" class="input" onchange="Theme.set(this.value)"><option value="auto">স্বয়ংক্রিয় (ফোনের সেটিং)</option><option value="light">লাইট মোড</option><option value="dark">ডার্ক মোড</option></select></div>
-        <label class="switch"><span class="sm fw6"><i class="fas fa-volume-high ptext"></i> ক্লিক সাউন্ড</span><input type="checkbox" ${Sound.isEnabled() ? 'checked' : ''} onchange="Sound.setEnabled(this.checked)"></label></div>
-      <div class="card pad mb3"><div class="sec-title"><i class="fas fa-lock ptext"></i> নিরাপত্তা (PIN লক)</div><p class="muted sm mb3">${Lock.has() ? 'PIN চালু আছে। অ্যাপ খুললে ও ১ মিনিটের বেশি ব্যাকগ্রাউন্ডে থাকলে PIN চাইবে।' : 'PIN দিলে অন্য কেউ আপনার বিক্রয় ও হিসাব দেখতে পারবে না।'}</p>
-        <div class="flex gap2"><button class="btn btn-primary" onclick="Lock.setup()">${Lock.has() ? 'PIN পরিবর্তন' : 'PIN সেট করুন'}</button>${Lock.has() ? '<button class="btn btn-ghost" onclick="Lock.lockNow()">এখনই লক</button><button class="btn btn-danger-soft" onclick="Lock.remove()">বন্ধ করুন</button>' : ''}</div></div>
-      <div class="card pad mb3"><div class="sec-title"><i class="fab fa-bluetooth-b ptext"></i> ব্লুটুথ প্রিন্টার</div><div class="mb3" id="bt-status"></div>
-        <div class="field"><label class="label">প্রিন্ট মোড</label><select class="input" onchange="DB_.btMode(this.value)"><option value="image" ${s.btMode !== 'text' ? 'selected' : ''}>ছবি মোড — বাংলা সহ (প্রস্তাবিত)</option><option value="text" ${s.btMode === 'text' ? 'selected' : ''}>টেক্সট মোড — শুধু ইংরেজি, দ্রুত</option></select></div>
-        <div class="flex gap2"><button class="btn btn-primary grow" id="bt-conn" onclick="Printer.connect()"><i class="fab fa-bluetooth-b"></i> প্রিন্টার সংযুক্ত করুন</button><button class="btn btn-danger-soft grow hidden" id="bt-disc" onclick="Printer.disconnect()">বিচ্ছিন্ন করুন</button></div>
-        <p class="xs muted mt2">Android Chrome/Edge-এ কাজ করে। প্রিন্টারটি আগে ফোনের ব্লুটুথে পেয়ার করা থাকলে ভালো।</p></div>
-      <div class="card pad mb3"><div class="sec-title"><i class="fab fa-google ptext"></i> Google Drive ক্লাউড ব্যাকআপ</div><div class="js-cloud-body"></div></div>
-      <div class="card pad mb3"><div class="sec-title"><i class="fas fa-database ptext"></i> ডেটা ব্যবস্থাপনা</div>
-        <div class="kv"><span class="muted">শেষ ব্যাকআপ</span><b>${last ? C.fmtDT(new Date(last).toISOString()) : 'কখনো নেওয়া হয়নি'}</b></div><div class="kv"><span class="muted">ব্যবহৃত স্টোরেজ</span><b class="${kb > 4000 ? 'bad' : ''}">${kb} KB / প্রায় ৫০০০ KB</b></div>
-        <div class="grid2 mt3"><button class="btn btn-primary" onclick="exportData()"><i class="fas fa-cloud-arrow-down"></i> ব্যাকআপ</button><label class="btn btn-ghost" style="cursor:pointer"><i class="fas fa-file-import"></i> রিস্টোর<input type="file" accept="application/json,.json" class="hidden" onchange="importData(this)"></label></div>
-        <button class="btn btn-danger-soft btn-block mt2" onclick="wipeAllData()"><i class="fas fa-trash"></i> সব ডেটা মুছুন</button></div>
-      <div class="card pad mb3"><div class="sec-title"><i class="fas fa-scale-balanced ptext"></i> আইনি তথ্য</div>
-        <div class="grid2"><a class="btn btn-ghost" href="privacy.html" target="_blank" rel="noopener"><i class="fas fa-user-shield"></i> প্রাইভেসি পলিসি</a><a class="btn btn-ghost" href="terms.html" target="_blank" rel="noopener"><i class="fas fa-file-contract"></i> শর্তাবলী</a></div></div>
-      <div class="tc muted xs">ProPOS v8 · ফ্রি অফলাইন POS · ডেটা আপনার ডিভাইসেই থাকে<br>© MH IT Limited · <a href="privacy.html" target="_blank" rel="noopener">প্রাইভেসি পলিসি</a> · <a href="terms.html" target="_blank" rel="noopener">শর্তাবলী</a></div>`;
+      $('view').innerHTML = `<div class="page-head"><div><h2>Settings</h2><p>Shop, appearance, security, printer & data</p></div></div>
+      <div class="card pad mb3"><div class="sec-title"><i class="fas fa-store ptext"></i> Shop info</div>
+        <div class="field"><label class="label">Shop name</label><input id="st-name" class="input" value="${esc(s.shopName)}"></div>
+        <div class="field"><label class="label">Address</label><input id="st-addr" class="input" value="${esc(s.shopAddress)}"></div>
+        <div class="grid2"><div class="field"><label class="label">Phone</label><input id="st-phone" class="input" value="${esc(s.shopPhone)}"></div><div class="field"><label class="label">Default tax (%)</label><input id="st-tax" type="number" step="any" min="0" class="input" value="${s.defaultTax || 0}"></div></div>
+        <div class="field"><label class="label">Receipt footer text</label><input id="st-foot" class="input" value="${esc(s.footer)}"></div>
+        <div class="grid3"><div class="field"><label class="label">Invoice prefix</label><input id="st-pre" class="input" value="${esc(s.invPrefix)}" placeholder="INV-"></div><div class="field"><label class="label">Paper</label><select id="st-paper" class="input"><option value="58" ${s.paper === '58' ? 'selected' : ''}>58 mm</option><option value="80" ${s.paper === '80' ? 'selected' : ''}>80 mm</option></select></div><div class="field"><label class="label">Low stock (default)</label><input id="st-low" type="number" min="0" class="input" value="${s.lowStockDefault || 5}"></div></div>
+        <button class="btn btn-primary btn-block" onclick="Settings.save()"><i class="fas fa-floppy-disk"></i> Save</button></div>
+      <div class="card pad mb3"><div class="sec-title"><i class="fas fa-palette ptext"></i> Appearance & sound</div>
+        <div class="field"><label class="label">Theme</label><select id="theme-select" class="input" onchange="Theme.set(this.value)"><option value="auto">Auto (device setting)</option><option value="light">Light mode</option><option value="dark">Dark mode</option></select></div>
+        <label class="switch"><span class="sm fw6"><i class="fas fa-volume-high ptext"></i> Click sound</span><input type="checkbox" ${Sound.isEnabled() ? 'checked' : ''} onchange="Sound.setEnabled(this.checked)"></label></div>
+      <div class="card pad mb3"><div class="sec-title"><i class="fas fa-lock ptext"></i> Security (PIN lock)</div><p class="muted sm mb3">${Lock.has() ? 'PIN is set. App will ask for PIN on open and after 1+ min in background.' : 'With a PIN, others cannot see your sales and accounts.'}</p>
+        <div class="flex gap2"><button class="btn btn-primary" onclick="Lock.setup()">${Lock.has() ? 'Change PIN' : 'Set PIN'}</button>${Lock.has() ? '<button class="btn btn-ghost" onclick="Lock.lockNow()">Lock now</button><button class="btn btn-danger-soft" onclick="Lock.remove()">Close</button>' : ''}</div></div>
+      <div class="card pad mb3"><div class="sec-title"><i class="fab fa-bluetooth-b ptext"></i> Bluetooth printer</div><div class="mb3" id="bt-status"></div>
+        <div class="field"><label class="label">Print mode</label><select class="input" onchange="DB_.btMode(this.value)"><option value="image" ${s.btMode !== 'text' ? 'selected' : ''}>Image mode — supports all languages (recommended)</option><option value="text" ${s.btMode === 'text' ? 'selected' : ''}>Text mode — English only, faster</option></select></div>
+        <div class="flex gap2"><button class="btn btn-primary grow" id="bt-conn" onclick="Printer.connect()"><i class="fab fa-bluetooth-b"></i> Connect printer</button><button class="btn btn-danger-soft grow hidden" id="bt-disc" onclick="Printer.disconnect()">Disconnect</button></div>
+        <p class="xs muted mt2">Works on Android Chrome/Edge. Pair the printer in phone Bluetooth first.</p></div>
+      <div class="card pad mb3"><div class="sec-title"><i class="fab fa-google ptext"></i> Google Drive Cloud Backup</div><div class="js-cloud-body"></div></div>
+      <div class="card pad mb3"><div class="sec-title"><i class="fas fa-database ptext"></i> Data management</div>
+        <div class="kv"><span class="muted">Storage used</span><b class="${kb > 4000 ? 'bad' : ''}">${kb} KB / ~5000 KB</b></div>
+        <p class="xs muted mt2">Data is stored on this device and backed up to Google Drive when signed in. Local file backup has been removed.</p>
+        <button class="btn btn-danger-soft btn-block mt2" onclick="wipeAllData()"><i class="fas fa-trash"></i> Delete all data</button></div>
+      <div class="card pad mb3"><div class="sec-title"><i class="fas fa-scale-balanced ptext"></i> Legal</div>
+        <div class="grid2"><a class="btn btn-ghost" href="privacy.html" target="_blank" rel="noopener"><i class="fas fa-user-shield"></i> Privacy Policy</a><a class="btn btn-ghost" href="terms.html" target="_blank" rel="noopener"><i class="fas fa-file-contract"></i> Terms of Service</a></div></div>
+      <div class="tc muted xs">ProPOS v8 · ফ্রি Offline POS · ডেটা আপনার ডিভাইসেই থাকে<br>© MH IT Limited · <a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a> · <a href="terms.html" target="_blank" rel="noopener">Terms of Service</a></div>`;
       Theme.apply(); Printer.ui(); if (window.Cloud) Cloud.renderUI();
     },
     save() {
-      const s = DB.settings; s.shopName = $('st-name').value.trim() || 'আমার দোকান'; s.shopAddress = $('st-addr').value.trim(); s.shopPhone = $('st-phone').value.trim();
+      const s = DB.settings; s.shopName = $('st-name').value.trim() || 'My Shop'; s.shopAddress = $('st-addr').value.trim(); s.shopPhone = $('st-phone').value.trim();
       s.defaultTax = Math.max(0, num($('st-tax').value)); s.footer = $('st-foot').value.trim(); s.invPrefix = $('st-pre').value.trim(); s.paper = $('st-paper').value; s.lowStockDefault = num($('st-low').value) || 5;
-      C.save('settings'); POS.taxInit(); POS.renderCart(); toast('সেটিংস সংরক্ষিত ✓');
+      C.save('settings'); POS.taxInit(); POS.renderCart(); toast('Settings Saved ✓');
     }
   };
   window.Settings = App.Views.settings;

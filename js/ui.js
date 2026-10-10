@@ -1,4 +1,4 @@
-/* ProPOS UI: সাউন্ড, ডায়ালগ, মডাল, থিম, ব্যাকআপ, শেয়ার/প্রিন্ট হেল্পার */
+/* ProPOS UI: সাউন্ড, ডায়ালগ, মডাল, Theme, Backup, Share/Print হেল্পার */
 (function () {
   'use strict';
   const { DB, esc, toast, saveAll, load, K } = Core;
@@ -44,9 +44,9 @@
     o = o || {}; closeConfirm();
     const el = document.createElement('div'); el.className = 'ui-confirm-backdrop';
     el.innerHTML = '<div class="ui-confirm" role="dialog" aria-modal="true"><div class="ui-confirm-icon ' + (o.danger ? 'danger' : '') + '"><i class="fas ' + (o.icon || (o.danger ? 'fa-triangle-exclamation' : 'fa-circle-question')) + '"></i></div><h3></h3><p></p><div class="ui-confirm-actions"><button type="button" class="btn n"></button><button type="button" class="btn y ' + (o.danger ? 'btn-bad' : 'btn-primary') + '"></button></div></div>';
-    el.querySelector('h3').textContent = o.title || 'নিশ্চিত করুন';
+    el.querySelector('h3').textContent = o.title || 'Confirm';
     el.querySelector('p').textContent = message;
-    el.querySelector('.n').textContent = o.no || 'বাতিল'; el.querySelector('.y').textContent = o.yes || 'হ্যাঁ';
+    el.querySelector('.n').textContent = o.no || 'Cancel'; el.querySelector('.y').textContent = o.yes || 'Yes';
     el.querySelector('.n').onclick = () => { closeConfirm(); o.onCancel && o.onCancel(); };
     el.querySelector('.y').onclick = () => { closeConfirm(); onYes && onYes(); };
     el.addEventListener('click', e => { if (e.target === el) closeConfirm(); });
@@ -83,7 +83,7 @@
   }
   window.syncLock = syncLock;
 
-  // ================= থিম (লাইট/ডার্ক/অটো) =================
+  // ================= Theme (লাইট/ডার্ক/অটো) =================
   const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
   const Theme = {
     mode: (function () { try { return localStorage.getItem('propos_theme') || 'auto'; } catch (_) { return 'auto'; } })(),
@@ -102,7 +102,7 @@
   document.addEventListener('DOMContentLoaded', () => Theme.apply());
   Theme.apply();
 
-  // ================= ব্যাকআপ / রিস্টোর =================
+  // ================= Backup / Restore =================
   let lastExport = 0;
   window.exportData = function (silent, force) {
     if (silent && !force && Date.now() - lastExport < 30000) return;
@@ -113,7 +113,7 @@
     const n = new Date(), z = Core.z2;
     const name = `propos-backup-${n.getFullYear()}-${z(n.getMonth() + 1)}-${z(n.getDate())}_${z(n.getHours())}-${z(n.getMinutes())}-${z(n.getSeconds())}.json`;
     Core.download(name, JSON.stringify(out), 'application/json');
-    if (!silent) toast('ব্যাকআপ ফাইল ডাউনলোড হয়েছে ✓');
+    if (!silent) toast('Backup file downloaded ✓');
   };
   window.importData = function (input) {
     const file = input.files && input.files[0]; input.value = ''; if (!file) return;
@@ -122,47 +122,27 @@
       try {
         const d = JSON.parse(e.target.result);
         if (!d || !Array.isArray(d.products)) throw new Error('bad');
-        askConfirm(`ব্যাকআপে ${d.products.length}টি পণ্য, ${(d.sales || []).length}টি বিক্রয়, ${(d.customers || []).length}জন ক্রেতা আছে। বর্তমান ডেটা মুছে এটি বসবে।`, () => {
+        askConfirm(`Backup has ${d.products.length} products, ${(d.sales || []).length} sales, ${(d.customers || []).length} customers. Current data will be replaced.`, () => {
           Object.keys(K).forEach(k => { if (k === 'settings') DB.settings = Object.assign({}, Core.DEFAULTS, d.settings || {}); else if (k === 'cart') DB.cart = []; else DB[k] = Array.isArray(d[k]) ? d[k] : []; });
-          Core.migrate(); saveAll(); toast('রিস্টোর সফল ✓'); setTimeout(() => location.reload(), 700);
-        }, { title: 'ব্যাকআপ রিস্টোর করবেন?', yes: 'হ্যাঁ, রিস্টোর', danger: true });
-      } catch (err) { toast('⚠️ ফাইলটি সঠিক ProPOS ব্যাকআপ নয়'); }
+          Core.migrate(); saveAll(); toast('Restore successful ✓'); setTimeout(() => location.reload(), 700);
+        }, { title: 'Restore backup?', yes: 'Yes, restore', danger: true });
+      } catch (err) { toast('⚠️ Not a valid ProPOS backup file'); }
     };
-    rd.onerror = () => toast('ফাইল পড়া যায়নি'); rd.readAsText(file);
+    rd.onerror = () => toast('Could not read file'); rd.readAsText(file);
   };
   window.wipeAllData = function () {
-    askConfirm('সব তথ্য (পণ্য, বিক্রয়, ক্রেতা, খরচ...) স্থায়ীভাবে মুছে যাবে। মুছার আগে স্বয়ংক্রিয় ব্যাকআপ ডাউনলোড হবে।', () => {
-      askConfirm('সত্যিই সব ডেটা মুছতে চান? এই কাজ ফেরানো যাবে না!', () => {
+    askConfirm('All data (products, sales, customers, expenses...) will be permanently deleted.', () => {
+      askConfirm('Really delete all data? This cannot be undone!', () => {
         exportData(true, true);
         setTimeout(() => { Object.values(K).forEach(k => localStorage.removeItem(k)); ['propos_last_backup', 'propos_dirty'].forEach(k => localStorage.removeItem(k)); location.reload(); }, 900);
-      }, { title: 'শেষ নিশ্চিতকরণ', yes: 'হ্যাঁ, সব মুছুন', danger: true });
-    }, { title: 'সব ডেটা মুছবেন?', yes: 'চালিয়ে যান', danger: true });
+      }, { title: 'Final confirmation', yes: 'Yes, delete all', danger: true });
+    }, { title: 'Delete all data?', yes: 'Continue', danger: true });
   };
 
-  // অ্যাপ লুকালে/বন্ধ হলে চেষ্টা + বাকি ব্যাকআপ রিমাইন্ডার
-  const hasData = () => DB.products.length || DB.sales.length || DB.customers.length;
-  function autoBackup() {
-    try {
-      if (localStorage.getItem('propos_dirty') !== '1' || !hasData()) return;
-      if (Date.now() - parseInt(localStorage.getItem('propos_auto_at') || '0', 10) < 5 * 60 * 1000) return;
-      exportData(true);
-    } catch (e) {}
-  }
-  window.addEventListener('pagehide', autoBackup);
-  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') autoBackup(); });
-  window.checkPendingBackup = function () {
-    if (localStorage.getItem('propos_dirty') !== '1' || !hasData()) return;
-    setTimeout(() => {
-      if (document.getElementById('ui-backup-bar')) return;
-      const bar = document.createElement('div'); bar.id = 'ui-backup-bar'; bar.className = 'ui-backup-bar';
-      bar.innerHTML = '<span>💾 শেষ ব্যাকআপের পর ডেটা বদলেছে</span><div><button type="button" class="b-now">এখনই ব্যাকআপ</button><button type="button" class="b-later">পরে</button></div>';
-      bar.querySelector('.b-now').onclick = () => { exportData(); bar.remove(); };
-      bar.querySelector('.b-later').onclick = () => bar.remove();
-      document.body.appendChild(bar);
-    }, 2000);
-  };
+  // Local file backup removed — cloud backup only (Google Drive)
+  window.checkPendingBackup = function () {};
 
-  // ================= শেয়ার / প্রিন্ট হেল্পার =================
+  // ================= Share / Print হেল্পার =================
   window.phoneIntl = function (p) {
     let d = String(p || '').replace(/\D/g, ''); if (!d) return '';
     if (d.startsWith('880')) return d; if (d.startsWith('0')) return '88' + d; return '880' + d;
@@ -173,6 +153,6 @@
     const f = document.createElement('iframe'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';
     document.body.appendChild(f);
     const d = f.contentWindow.document; d.open(); d.write(html); d.close();
-    setTimeout(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { toast('প্রিন্ট করা যায়নি'); } setTimeout(() => f.remove(), 2000); }, 400);
+    setTimeout(() => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { toast('Could not print'); } setTimeout(() => f.remove(), 2000); }, 400);
   };
 })();
