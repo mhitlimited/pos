@@ -1,5 +1,5 @@
 /* ProPOS Service Worker — bump CACHE_VERSION on new release */
-const CACHE_VERSION = 'v8.1';
+const CACHE_VERSION = 'v8.3';
 const APP_CACHE = `propos-app-${CACHE_VERSION}`;
 const CDN_CACHE = `propos-cdn-${CACHE_VERSION}`;
 const APP_SHELL = ['./', './index.html', './privacy.html', './terms.html', './style.css', './manifest.webmanifest',
