@@ -1,9 +1,9 @@
 /* ProPOS Service Worker — নতুন ভার্সন দিলে CACHE_VERSION বাড়ান */
-const CACHE_VERSION = 'v6';
+const CACHE_VERSION = 'v7';
 const APP_CACHE = `propos-app-${CACHE_VERSION}`;
 const CDN_CACHE = `propos-cdn-${CACHE_VERSION}`;
 const APP_SHELL = ['./', './index.html', './style.css', './manifest.webmanifest',
-  './js/core.js', './js/ui.js', './js/app.js', './js/people.js', './js/misc.js', './js/settings.js', './js/pwa.js',
+  './js/core.js', './js/ui.js', './js/app.js', './js/people.js', './js/misc.js', './js/settings.js', './js/config.js', './js/cloud.js', './js/pwa.js',
   './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'];
 const CDN_HOSTS = ['cdnjs.cloudflare.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 

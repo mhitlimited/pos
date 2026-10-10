@@ -9,6 +9,7 @@
 
     <link rel="manifest" href="manifest.webmanifest">
     <meta name="theme-color" content="#4f46e5">
+    <link rel="preconnect" href="https://accounts.google.com">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="ProPOS">
@@ -29,6 +30,7 @@
     <div class="brand"><div class="logo"><i class="fas fa-cash-register"></i></div><div><div class="fw7" style="font-size:17px">ProPOS</div><div class="xs muted">ফ্রি পয়েন্ট অফ সেল</div></div></div>
     <nav class="nav" id="nav-desk"></nav>
     <div style="padding:10px;border-top:1px solid var(--border)" class="flex col gap2">
+        <div class="js-acct"></div>
         <button class="btn btn-primary btn-block" onclick="exportData()"><i class="fas fa-cloud-arrow-down"></i> ব্যাকআপ নিন</button>
         <div class="grid2"><button class="btn btn-ghost" onclick="Theme.toggle()"><i class="theme-ico fas fa-moon"></i> থিম</button><button class="btn btn-ghost" onclick="Lock.lockNow()"><i class="fas fa-lock"></i> লক</button></div>
     </div>
@@ -38,6 +40,7 @@
 <header class="topbar">
     <div class="flex items-c gap2"><div class="logo" style="width:34px;height:34px;font-size:14px"><i class="fas fa-cash-register"></i></div><b style="font-size:17px">ProPOS</b></div>
     <div class="flex items-c">
+        <button type="button" class="sync-chip js-chip" onclick="Cloud.panel()" title="Google Drive ব্যাকআপ"></button>
         <button class="icon-btn" onclick="exportData()" title="ব্যাকআপ"><i class="fas fa-cloud-arrow-down"></i></button>
         <button class="icon-btn" onclick="Theme.toggle()" title="ডার্ক/লাইট"><i class="theme-ico fas fa-moon"></i></button>
         <button class="icon-btn pos-only" onclick="App.toggleCart()" title="কার্ট"><i class="fas fa-bag-shopping"></i><span class="cart-badge hidden" id="cart-badge">0</span></button>
@@ -54,6 +57,7 @@
     <div class="brand"><div class="logo"><i class="fas fa-cash-register"></i></div><div class="grow"><div class="fw7" style="font-size:17px">ProPOS</div><div class="xs muted">ফ্রি পয়েন্ট অফ সেল</div></div><button class="icon-btn" onclick="App.closeDrawers()"><i class="fas fa-xmark"></i></button></div>
     <nav class="nav" id="nav-mob"></nav>
     <div style="padding:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--border)" class="flex col gap2">
+        <div class="js-acct" onclick="App.closeDrawers()"></div>
         <button class="btn btn-primary btn-block" onclick="App.closeDrawers();exportData()"><i class="fas fa-cloud-arrow-down"></i> ব্যাকআপ নিন</button>
         <div class="grid2"><button class="btn btn-ghost" onclick="Theme.toggle()"><i class="theme-ico fas fa-moon"></i> থিম</button><button class="btn btn-ghost" onclick="App.closeDrawers();Lock.lockNow()"><i class="fas fa-lock"></i> লক</button></div>
     </div>
@@ -65,6 +69,8 @@
     <div id="cart-mobile" style="padding:14px;overflow-y:auto;flex:1;padding-bottom:calc(14px + env(safe-area-inset-bottom))"></div>
 </aside>
 
+<button type="button" id="cart-bar" class="cart-bar empty" onclick="App.toggleCart()" aria-label="কার্ট"></button>
+
 <div id="toast" class="hidden"></div>
 
 <script src="js/core.js"></script>
@@ -73,6 +79,8 @@
 <script src="js/people.js"></script>
 <script src="js/misc.js"></script>
 <script src="js/settings.js"></script>
+<script src="js/config.js"></script>
+<script src="js/cloud.js"></script>
 <script src="js/pwa.js"></script>
 </body>
 </html>
