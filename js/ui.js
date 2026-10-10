@@ -6,7 +6,7 @@
   // ================= সাউন্ড =================
   const Sound = (function () {
     let ctx = null, last = 0;
-    let enabled = localStorage.getItem('propos_sound') !== '0';
+    let enabled = true; try { enabled = localStorage.getItem('propos_sound') !== '0'; } catch (_) {}
     function ensure() {
       if (!ctx) { const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return null; ctx = new AC(); }
       if (ctx.state === 'suspended') ctx.resume();
@@ -29,7 +29,7 @@
         else if (kind === 'beep') tone(1800, 0, 0.12, 0.08);
       } catch (e) {}
     }
-    return { play, isEnabled: () => enabled, setEnabled(v) { enabled = !!v; localStorage.setItem('propos_sound', enabled ? '1' : '0'); if (enabled) play('click'); } };
+    return { play, isEnabled: () => enabled, setEnabled(v) { enabled = !!v; try { localStorage.setItem('propos_sound', enabled ? '1' : '0'); } catch (_) {} if (enabled) play('click'); } };
   })();
   window.Sound = Sound;
   document.addEventListener('click', e => {
@@ -86,7 +86,7 @@
   // ================= থিম (লাইট/ডার্ক/অটো) =================
   const mq = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
   const Theme = {
-    mode: localStorage.getItem('propos_theme') || 'auto',
+    mode: (function () { try { return localStorage.getItem('propos_theme') || 'auto'; } catch (_) { return 'auto'; } })(),
     isDark() { return this.mode === 'dark' || (this.mode === 'auto' && mq && mq.matches); },
     apply() {
       document.documentElement.classList.toggle('dark', this.isDark());
@@ -94,7 +94,7 @@
       document.querySelectorAll('.theme-ico').forEach(i => { i.className = 'theme-ico fas ' + (this.isDark() ? 'fa-sun' : 'fa-moon'); });
       const s = document.getElementById('theme-select'); if (s) s.value = this.mode;
     },
-    set(mode) { this.mode = mode; localStorage.setItem('propos_theme', mode); this.apply(); },
+    set(mode) { this.mode = mode; try { localStorage.setItem('propos_theme', mode); } catch (_) {} this.apply(); },
     toggle() { this.set(this.isDark() ? 'light' : 'dark'); }
   };
   window.Theme = Theme;
@@ -104,8 +104,8 @@
 
   // ================= ব্যাকআপ / রিস্টোর =================
   let lastExport = 0;
-  window.exportData = function (silent) {
-    if (silent && Date.now() - lastExport < 30000) return;
+  window.exportData = function (silent, force) {
+    if (silent && !force && Date.now() - lastExport < 30000) return;
     lastExport = Date.now();
     try { localStorage.setItem('propos_last_backup', String(Date.now())); localStorage.setItem('propos_auto_at', String(Date.now())); localStorage.removeItem('propos_dirty'); } catch (_) {}
     const out = { app: 'ProPOS', version: 3, exportDate: new Date().toISOString() };
@@ -133,7 +133,7 @@
   window.wipeAllData = function () {
     askConfirm('সব তথ্য (পণ্য, বিক্রয়, ক্রেতা, খরচ...) স্থায়ীভাবে মুছে যাবে। মুছার আগে স্বয়ংক্রিয় ব্যাকআপ ডাউনলোড হবে।', () => {
       askConfirm('সত্যিই সব ডেটা মুছতে চান? এই কাজ ফেরানো যাবে না!', () => {
-        exportData(true);
+        exportData(true, true);
         setTimeout(() => { Object.values(K).forEach(k => localStorage.removeItem(k)); ['propos_last_backup', 'propos_dirty'].forEach(k => localStorage.removeItem(k)); location.reload(); }, 900);
       }, { title: 'শেষ নিশ্চিতকরণ', yes: 'হ্যাঁ, সব মুছুন', danger: true });
     }, { title: 'সব ডেটা মুছবেন?', yes: 'চালিয়ে যান', danger: true });
@@ -167,7 +167,7 @@
     let d = String(p || '').replace(/\D/g, ''); if (!d) return '';
     if (d.startsWith('880')) return d; if (d.startsWith('0')) return '88' + d; return '880' + d;
   };
-  window.shareWA = function (phone, text) { const n = phoneIntl(phone); window.open('https://wa.me/' + (n || '') + '?text=' + encodeURIComponent(text), '_blank'); };
+  window.shareWA = function (phone, text) { const n = phoneIntl(phone); window.open('https://wa.me/' + (n || '') + '?text=' + encodeURIComponent(text), '_blank', 'noopener'); };
   window.shareSMS = function (phone, text) { location.href = 'sms:' + (phone || '') + '?body=' + encodeURIComponent(text); };
   window.printHTML = function (html) {
     const f = document.createElement('iframe'); f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0';

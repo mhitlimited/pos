@@ -179,7 +179,7 @@
     const grossProfit = r2(salesRevenue - cogs - (retRevenue - retCogs));
     const expenses = sum(E, e => e.amount);
     const byMethod = { cash: 0, card: 0, mobile: 0 };
-    S.forEach(s => { const m = byMethod[s.paymentMethod] !== undefined ? s.paymentMethod : 'cash'; byMethod[m] += num(s.paid) - num(s.change || 0) * 0; });
+    S.forEach(s => { const m = byMethod[s.paymentMethod] !== undefined ? s.paymentMethod : 'cash'; byMethod[m] += num(s.paid); });
     // paid = বিক্রয়ে প্রযোজ্য টাকা (ফেরত বাদে)
     const collected = {};
     ['cash', 'card', 'mobile'].forEach(m => { collected[m] = r2(byMethod[m] + sum(P.filter(p => (p.method || 'cash') === m), p => p.amount)); });

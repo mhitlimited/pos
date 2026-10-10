@@ -108,9 +108,9 @@
     taxInit() { this.tax = num(DB.settings.defaultTax); },
     totals() {
       const subtotal = r2(DB.cart.reduce((s, c) => s + c.price * c.qty, 0));
-      let discount = this.discType === 'percent' ? subtotal * num(this.disc) / 100 : num(this.disc);
+      let discount = this.discType === 'percent' ? subtotal * Math.max(0, num(this.disc)) / 100 : Math.max(0, num(this.disc));
       discount = r2(Math.min(Math.max(discount, 0), subtotal));
-      const tax = r2((subtotal - discount) * num(this.tax) / 100);
+      const tax = r2((subtotal - discount) * Math.max(0, num(this.tax)) / 100);
       return { subtotal, discount, tax, total: r2(subtotal - discount + tax) };
     },
     render() {
@@ -152,7 +152,7 @@
         const exp = p.expiry && p.expiry < C.todayKey();
         return `<div class="pcard" data-id="${p.id}" onclick="POS.add('${p.id}')">
           <span class="pqty"></span><span class="added-fx"></span>
-          <div class="pimg">${p.image ? `<img src="${p.image}" alt="">` : '<i class="fas fa-box"></i>'}</div>
+          <div class="pimg">${p.image ? `<img src="${esc(p.image)}" alt="">` : '<i class="fas fa-box"></i>'}</div>
           ${exp ? '<span class="ptag">মেয়াদ শেষ</span>' : (p.track !== false && p.stock <= 0 ? '<span class="ptag">স্টক নেই</span>' : (low ? '<span class="ptag" style="background:#d97706">কম স্টক</span>' : ''))}
           <div class="pname">${esc(p.name)}</div>
           <div class="pmeta"><span class="pprice">${money(p.price)}</span><span class="${low ? 'bad fw6' : 'muted'}">${p.track === false ? '∞' : p.stock + ' ' + esc(p.unit || '')}</span></div></div>`;
@@ -168,22 +168,31 @@
     search(v) { this.q = v; this.limit = 120; this.renderGrid(); },
     setCat(c) { this.cat = c; this.limit = 120; this.renderCats(); this.renderGrid(); },
     more() { this.limit += 120; this.renderGrid(); },
+    // বারকোড মেলানো: স্পেস বাদ, আর UPC-A (১২ সংখ্যা) ও EAN-13 (শুরুতে 0) সমান ধরা হয়
+    findByBarcode(code) {
+      const key = x => { x = String(x == null ? '' : x).trim(); return /^\d{12,13}$/.test(x) ? x.padStart(13, '0') : x; };
+      const k = key(code); if (!k) return null;
+      return DB.products.find(p => p.barcode && key(p.barcode) === k) || null;
+    },
     enter() {
       const q = this.q.trim(); if (!q) return;
-      const exact = DB.products.find(p => p.barcode && p.barcode === q);
+      const exact = this.findByBarcode(q);
       const list = this.filtered();
       const p = exact || (list.length === 1 ? list[0] : null);
       if (p) { this.add(p.id); this.q = ''; const s = $('pos-search'); if (s) { s.value = ''; s.focus(); } this.renderGrid(); }
       else toast('একাধিক বা কোনো পণ্য মেলেনি');
     },
     scan() {
-      if (!window.Scanner) return;
+      if (!window.Scanner || Scanner.isOpen()) return;
       Scanner.open(code => {
-        const p = DB.products.find(x => x.barcode === code);
-        if (p) { this.add(p.id, true); } else toast('⚠️ বারকোড পাওয়া যায়নি: ' + code);
-      }, { continuous: true, hint: 'পণ্যের বারকোড ফ্রেমে ধরুন' });
+        const p = this.findByBarcode(code);
+        if (!p) { Scanner.flash('⚠️ বারকোড পাওয়া যায়নি: ' + code, 'bad'); return false; }   // ক্যামেরা খোলা থাকে, আবার চেষ্টা করা যায়
+        Scanner.close();                                         // পণ্য মিলেছে → ক্যামেরা সাথে সাথে বন্ধ
+        this.add(p.id, true, { picked: true });                  // কার্টে সিলেক্ট + "প্রোডাক্ট সিলেক্ট হয়েছে" বার্তা
+      }, { hint: 'পণ্যের বারকোড ফ্রেমে ধরুন' });
     },
-    add(id, quiet) {
+    add(id, quiet, opt) {
+      opt = opt || {};
       const p = findProduct(id); if (!p) return;
       const go = () => {
         const ex = DB.cart.find(c => c.id === id);
@@ -192,7 +201,9 @@
           if (ex && ex.qty >= p.stock) { toast('⚠️ স্টক অপর্যাপ্ত!'); return; }
         }
         if (ex) ex.qty++; else DB.cart.push({ id: p.id, name: p.name, price: p.price, cost: p.cost || 0, qty: 1, unit: p.unit });
-        C.save('cart'); this.lastAdded = { id: p.id, isNew: !ex }; this.renderCart(); Fx.added(p.id, quiet); if (quiet) Sound.play('beep');
+        C.save('cart'); this.lastAdded = { id: p.id, isNew: !ex }; this.renderCart(); Fx.added(p.id, quiet);
+        if (opt.picked) toast('✓ প্রোডাক্ট সিলেক্ট হয়েছে: ' + p.name);
+        else if (quiet) Sound.play('beep');
       };
       if (p.expiry && p.expiry < C.todayKey()) askConfirm(`"${p.name}" এর মেয়াদ শেষ হয়ে গেছে। তবুও বিক্রি করবেন?`, go, { title: 'মেয়াদোত্তীর্ণ পণ্য', danger: true, yes: 'হ্যাঁ, যোগ করুন' });
       else go();
@@ -324,7 +335,7 @@
       this.coCalc();
     },
     coCalc() {
-      const t = this.totals(); const raw = num($('co-paid').value); let paid = raw, change = 0;
+      const t = this.totals(); const raw = Math.max(0, num($('co-paid').value)); let paid = raw, change = 0;
       if (this.payMethod === 'cash') { if (raw > t.total) { change = r2(raw - t.total); paid = t.total; } }
       else if (raw > t.total) paid = t.total;
       const due = r2(Math.max(0, t.total - paid));
@@ -395,7 +406,7 @@
         const low = p.track !== false && p.stock <= (p.minStock || 0);
         const exp = p.expiry ? (p.expiry < C.todayKey() ? '<span class="badge b-bad">মেয়াদ শেষ</span>' : (p.expiry <= soon ? '<span class="badge b-warn">মেয়াদ ' + p.expiry + '</span>' : '')) : '';
         return `<div class="row" onclick="Products.edit('${p.id}')">
-          <div class="avatar" style="overflow:hidden">${p.image ? `<img src="${p.image}" style="width:100%;height:100%;object-fit:cover">` : '<i class="fas fa-box"></i>'}</div>
+          <div class="avatar" style="overflow:hidden">${p.image ? `<img src="${esc(p.image)}" style="width:100%;height:100%;object-fit:cover">` : '<i class="fas fa-box"></i>'}</div>
           <div class="grow"><div class="t">${esc(p.name)} ${exp}</div><div class="s">${esc(p.category || 'ক্যাটাগরি নেই')}${p.barcode ? ' · ' + esc(p.barcode) : ''} · ক্রয় ${money(p.cost || 0)}</div></div>
           <div class="tr"><div class="fw7 ptext">${money(p.price)}</div><div class="xs ${low ? 'bad fw6' : 'muted'}">${p.track === false ? 'স্টক ট্র্যাক নেই' : p.stock + ' ' + esc(p.unit || '')}</div></div>
           <button class="icon-btn" onclick="event.stopPropagation();Products.del('${p.id}')"><i class="fas fa-trash bad"></i></button></div>`;
@@ -405,7 +416,7 @@
       const p = id ? findProduct(id) : null; this.img = p ? (p.image || null) : null;
       const cats = [...new Set(DB.products.map(x => x.category).filter(Boolean))];
       const m = Modal.open({ title: p ? 'পণ্য সম্পাদনা' : 'নতুন পণ্য', body: `
-        <div class="flex gap3 mb3 items-c"><label style="cursor:pointer"><div class="avatar" id="pf-img" style="width:64px;height:64px;overflow:hidden">${this.img ? `<img src="${this.img}" style="width:100%;height:100%;object-fit:cover">` : '<i class="fas fa-camera"></i>'}</div><input type="file" accept="image/*" class="hidden" onchange="Products.pickImg(this)"></label>
+        <div class="flex gap3 mb3 items-c"><label style="cursor:pointer"><div class="avatar" id="pf-img" style="width:64px;height:64px;overflow:hidden">${this.img ? `<img src="${esc(this.img)}" style="width:100%;height:100%;object-fit:cover">` : '<i class="fas fa-camera"></i>'}</div><input type="file" accept="image/*" class="hidden" onchange="Products.pickImg(this)"></label>
           <div class="grow"><label class="label">পণ্যের নাম *</label><input id="pf-name" class="input" autofocus value="${esc(p ? p.name : '')}"></div></div>
         <div class="field"><label class="label">বারকোড</label><div class="flex gap2"><input id="pf-bc" class="input" value="${esc(p ? p.barcode : '')}" placeholder="স্ক্যান বা টাইপ করুন"><button class="btn btn-soft" onclick="Products.scanBC()"><i class="fas fa-barcode"></i></button></div></div>
         <div class="grid2"><div class="field"><label class="label">ক্যাটাগরি</label><input id="pf-cat" class="input" list="pf-cats" value="${esc(p ? p.category : '')}"><datalist id="pf-cats">${cats.map(c => `<option value="${esc(c)}">`).join('')}</datalist></div>
@@ -423,15 +434,15 @@
       rd.onload = e => { const im = new Image(); im.onload = () => { const r = Math.min(1, 400 / Math.max(im.width, im.height)); const c = document.createElement('canvas'); c.width = Math.round(im.width * r); c.height = Math.round(im.height * r); c.getContext('2d').drawImage(im, 0, 0, c.width, c.height); this.img = c.toDataURL('image/jpeg', .75); $('pf-img').innerHTML = `<img src="${this.img}" style="width:100%;height:100%;object-fit:cover">`; }; im.src = e.target.result; };
       rd.readAsDataURL(f);
     },
-    scanBC() { Scanner.open(code => { $('pf-bc').value = code; Scanner.close(); }, { hint: 'পণ্যের বারকোড ধরুন' }); },
+    scanBC() { Scanner.open(code => { const f = $('pf-bc'); if (f) { f.value = code; toast('✓ বারকোড নেওয়া হয়েছে'); } }, { hint: 'পণ্যের বারকোড ধরুন' }); },
     save(id, btn) {
       const name = $('pf-name').value.trim(); const price = parseFloat($('pf-price').value);
       if (!name) { toast('⚠️ পণ্যের নাম দিন'); return; } if (!isFinite(price) || price < 0) { toast('⚠️ সঠিক বিক্রয়মূল্য দিন'); return; }
       const bc = $('pf-bc').value.trim();
       if (bc && DB.products.some(x => x.barcode === bc && x.id !== id)) { toast('⚠️ এই বারকোড অন্য পণ্যে আছে'); return; }
       const old = id ? findProduct(id) : null;
-      const obj = { id: id || genId(), name, barcode: bc, category: $('pf-cat').value.trim(), unit: $('pf-unit').value.trim() || 'পিস', cost: num($('pf-cost').value), price,
-        stock: num($('pf-stock').value), minStock: num($('pf-min').value), expiry: $('pf-exp').value, track: $('pf-track').checked, image: this.img || null };
+      const obj = { id: id || genId(), name, barcode: bc, category: $('pf-cat').value.trim(), unit: $('pf-unit').value.trim() || 'পিস', cost: Math.max(0, num($('pf-cost').value)), price,
+        stock: Math.max(0, num($('pf-stock').value)), minStock: Math.max(0, num($('pf-min').value)), expiry: $('pf-exp').value, track: $('pf-track').checked, image: this.img || null };
       if (old) Object.assign(old, obj); else DB.products.push(obj);
       C.save('products'); Modal.closeFrom(btn); toast(old ? 'পণ্য আপডেট হয়েছে ✓' : 'নতুন পণ্য যোগ হয়েছে ✓'); App.refresh();
     },
@@ -455,7 +466,7 @@
       const f = input.files && input.files[0]; input.value = ''; if (!f) return; const rd = new FileReader();
       rd.onload = e => {
         let rows = C.parseCSV(e.target.result); if (!rows.length) { toast('⚠️ ফাইল খালি'); return; }
-        if (/নাম|name/i.test(rows[0][0]) ) rows = rows.slice(1);
+        if (/^\s*(নাম|name)\s*$/i.test(rows[0][0] || '')) rows = rows.slice(1);
         let add = 0, upd = 0, bad = 0;
         rows.forEach(r => {
           const name = (r[0] || '').trim(); const price = parseFloat(r[4]); if (!name || !isFinite(price)) { bad++; return; }

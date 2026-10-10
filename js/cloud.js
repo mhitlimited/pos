@@ -277,6 +277,7 @@
   function bodyHTML() {
     if (!isOn()) return `<p class="muted sm mb3">Google দিয়ে সাইন ইন করলে আপনার সব ডেটা আপনার নিজের Google Drive-এ (গোপন অ্যাপ-ফোল্ডারে) স্বয়ংক্রিয়ভাবে সেভ হবে। ব্রাউজারের ডেটা মুছে গেলেও আবার সাইন ইন করলেই সব ফিরে আসবে।</p>
       <button class="btn btn-google btn-block" onclick="Cloud.signIn()">${gIcon} Google দিয়ে সাইন ইন / সাইন আপ</button>
+      <div class="consent-note">সাইন ইন করে আপনি আমাদের <a href="terms.html" target="_blank" rel="noopener">শর্তাবলী</a> ও <a href="privacy.html" target="_blank" rel="noopener">প্রাইভেসি পলিসি</a> মেনে নিচ্ছেন।</div>
       ${clientId() ? '' : '<div class="note-warn mt3"><i class="fas fa-triangle-exclamation"></i> Client ID সেট করা নেই। <a href="#" onclick="Cloud.setup();return false">সেটআপ গাইড দেখুন</a></div>'}`;
     const l = lbl();
     return `<div class="flex items-c gap3 mb3">${avatar(true)}<div class="grow"><div class="fw7 trunc">${esc(get(KEY.name) || 'Google অ্যাকাউন্ট')}</div><div class="xs muted trunc">${esc(get(KEY.email))}</div></div></div>
@@ -311,7 +312,8 @@
       <p>${restore ? 'আপনার Google অ্যাকাউন্ট (' + esc(get(KEY.email)) + ') সংযুক্ত আছে, কিন্তু এই ডিভাইসে কোনো ডেটা নেই। ক্লাউড থেকে সব ফিরিয়ে আনুন।' : 'Google দিয়ে সাইন ইন করুন — ব্রাউজারের ডেটা মুছে গেলেও আবার সাইন ইন করলেই সব ডেটা ফিরে আসবে।'}</p>
       <ul class="w-list"><li><i class="fas fa-cloud-arrow-up"></i> অটো ক্লাউড ব্যাকআপ</li><li><i class="fas fa-shield-halved"></i> ডেটা শুধু আপনার Drive-এ</li><li><i class="fas fa-mobile-screen-button"></i> যেকোনো ডিভাইসে একই ডেটা</li></ul>
       <button class="btn btn-google btn-block" id="w-go">${gIcon} ${restore ? 'ক্লাউড থেকে ফিরিয়ে আনুন' : 'Google দিয়ে সাইন ইন / সাইন আপ'}</button>
-      <button class="btn btn-ghost btn-block mt2" id="w-skip">${restore ? 'নতুন করে শুরু করুন' : 'এখন নয়, অফলাইনে শুরু করুন'}</button></div>`;
+      <button class="btn btn-ghost btn-block mt2" id="w-skip">${restore ? 'নতুন করে শুরু করুন' : 'এখন নয়, অফলাইনে শুরু করুন'}</button>
+      <div class="consent-note">সাইন ইন করে আপনি আমাদের <a href="terms.html" target="_blank" rel="noopener">শর্তাবলী</a> ও <a href="privacy.html" target="_blank" rel="noopener">প্রাইভেসি পলিসি</a> মেনে নিচ্ছেন।</div></div>`;
     document.body.appendChild(el);
     el.querySelector('#w-go').onclick = () => signIn(false);
     el.querySelector('#w-skip').onclick = () => { set(KEY.welcomed, '1'); if (restore) del(KEY.rev); closeWelcome(); };

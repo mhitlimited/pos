@@ -6,7 +6,9 @@
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', async () => {
       try {
+        const hadController = !!navigator.serviceWorker.controller;
         const reg = await navigator.serviceWorker.register('./sw.js');
+        if (reg.waiting && hadController) showUpdateBar(reg.waiting);   // আগের ভিজিটে নামা আপডেট অপেক্ষায় থাকলে আবার দেখান
 
         reg.addEventListener('updatefound', () => {
           const nw = reg.installing;
@@ -20,7 +22,7 @@
 
         let refreshing = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
-          if (refreshing) return;
+          if (refreshing || !hadController) return;   // প্রথম ইনস্টলে অকারণ রিলোড নয়
           refreshing = true;
           location.reload();
         });

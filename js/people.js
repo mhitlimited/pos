@@ -108,9 +108,11 @@
     remind(id) {
       const c = findCustomer(id); const b = C.customerBalance(id); if (b <= 0) { toast('এই ক্রেতার কোনো বাকি নেই'); return; }
       const txt = `প্রিয় ${c.name}, ${DB.settings.shopName}-এ আপনার ${money(b)} টাকা বাকি আছে। অনুগ্রহ করে সুবিধামতো পরিশোধ করুন। ধন্যবাদ।`;
-      Modal.open({ title: 'বাকির রিমাইন্ডার', body: `<div class="card pad-s mb3 sm" style="user-select:text">${esc(txt)}</div>
-        <div class="grid2"><button class="btn btn-ok" onclick="shareWA('${esc(c.phone || '')}', ${JSON.stringify(txt).replace(/"/g, '&quot;')})"><i class="fab fa-whatsapp"></i> WhatsApp</button>
-        <button class="btn btn-soft" onclick="shareSMS('${esc(c.phone || '')}', ${JSON.stringify(txt).replace(/"/g, '&quot;')})"><i class="fas fa-message"></i> SMS</button></div>${c.phone ? '' : '<p class="xs muted mt2">ফোন নম্বর না থাকায় WhatsApp-এ কন্টাক্ট বেছে নিতে হবে।</p>'}` });
+      const m = Modal.open({ title: 'বাকির রিমাইন্ডার', body: `<div class="card pad-s mb3 sm" style="user-select:text">${esc(txt)}</div>
+        <div class="grid2"><button class="btn btn-ok" id="rm-wa"><i class="fab fa-whatsapp"></i> WhatsApp</button>
+        <button class="btn btn-soft" id="rm-sms"><i class="fas fa-message"></i> SMS</button></div>${c.phone ? '' : '<p class="xs muted mt2">ফোন নম্বর না থাকায় WhatsApp-এ কন্টাক্ট বেছে নিতে হবে।</p>'}` });
+      m.querySelector('#rm-wa').onclick = () => shareWA(c.phone || '', txt);
+      m.querySelector('#rm-sms').onclick = () => shareSMS(c.phone || '', txt);
     },
     del(id) {
       const c = findCustomer(id); const used = DB.sales.some(s => s.customerId === id) || DB.payments.some(p => p.customerId === id);
@@ -198,11 +200,11 @@
     selP(i, pid) { People.pr[i].pid = pid; const p = findProduct(pid); if (p) People.pr[i].cost = p.cost || 0; this.rows(); },
     setR(i, k, v) { People.pr[i][k] = num(v); this.puCalc(); },
     puTotal() { return r2(People.pr.reduce((s, r) => s + num(r.qty) * num(r.cost), 0)); },
-    puCalc() { const t = this.puTotal(); const e = $('pu-total'); if (!e) return; e.textContent = money(t); const paid = Math.min(num($('pu-paid').value), t); $('pu-due').value = money(Math.max(0, r2(t - paid))); },
+    puCalc() { const t = this.puTotal(); const e = $('pu-total'); if (!e) return; e.textContent = money(t); const paid = Math.min(Math.max(0, num($('pu-paid').value)), t); $('pu-due').value = money(Math.max(0, r2(t - paid))); },
     savePurchase(btn) {
       const rows = People.pr.filter(r => r.pid && num(r.qty) > 0);
       if (!rows.length) { toast('⚠️ অন্তত একটি পণ্য ও পরিমাণ দিন'); return; }
-      const total = r2(rows.reduce((s, r) => s + r.qty * r.cost, 0)); const paid = Math.min(num($('pu-paid').value), total); const due = r2(total - paid);
+      const total = r2(rows.reduce((s, r) => s + r.qty * r.cost, 0)); const paid = Math.min(Math.max(0, num($('pu-paid').value)), total); const due = r2(total - paid);
       const sup = $('pu-sup').value; if (due > 0 && !sup) { toast('⚠️ বাকি রাখতে সরবরাহকারী বাছাই করুন'); return; }
       rows.forEach(r => { const p = findProduct(r.pid); if (p) { if (p.track !== false) p.stock = r2(num(p.stock) + r.qty); if (r.cost > 0) p.cost = r.cost; } });
       const no = DB.purchases.length ? Math.max.apply(null, DB.purchases.map(p => p.no || 0)) + 1 : 1;

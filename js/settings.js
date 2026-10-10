@@ -5,38 +5,58 @@
   const $ = id => document.getElementById(id);
 
   // ================= বারকোড স্ক্যানার (ক্যামেরা) =================
+  // cb(code) false ফেরত দিলে ক্যামেরা খোলা থাকে (যেমন বারকোড মেলেনি); অন্যথায় non-continuous মোডে স্ক্যান হওয়ার সাথে সাথে বন্ধ হয়।
   const Scanner = window.Scanner = {
-    el: null, stream: null, timer: null, last: '', lastT: 0,
-    isOpen() { return !!this.el; },
+    el: null, stream: null, timer: null, last: '', lastT: 0, busy: false, opening: false, tok: 0, msgT: null,
+    isOpen() { return !!this.el || this.opening; },
     async open(cb, o) {
       o = o || {};
+      if (this.el || this.opening) return;
       if (!('BarcodeDetector' in window)) { toast('⚠️ এই ব্রাউজারে ক্যামেরা স্ক্যান নেই। USB/ব্লুটুথ স্ক্যানার বা টাইপ করুন।'); return; }
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { toast('⚠️ ক্যামেরা পাওয়া যায়নি (HTTPS দরকার)'); return; }
-      let det; try { det = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf', 'qr_code'] }); } catch (_) { det = new BarcodeDetector(); }
-      try { this.stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false }); }
-      catch (e) { toast('⚠️ ক্যামেরার অনুমতি দেওয়া হয়নি'); return; }
+      let det; try { det = new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'itf', 'qr_code'] }); } catch (_) { try { det = new BarcodeDetector(); } catch (e2) { toast('⚠️ এই ব্রাউজারে ক্যামেরা স্ক্যান নেই'); return; } }
+      const tok = ++this.tok; this.opening = true;
+      let stream;
+      try { stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false }); }
+      catch (e) { this.opening = false; toast(e && e.name === 'NotFoundError' ? '⚠️ ডিভাইসে ক্যামেরা পাওয়া যায়নি' : '⚠️ ক্যামেরার অনুমতি দেওয়া হয়নি'); return; }
+      this.opening = false;
+      if (tok !== this.tok) { stream.getTracks().forEach(t => t.stop()); return; }   // খোলার মাঝে Back/বন্ধ চাপা হয়েছে
+      this.stream = stream;
       const el = document.createElement('div'); el.className = 'scan';
-      el.innerHTML = `<video playsinline muted autoplay></video><div class="frame"></div><div class="bar-top"><b>বারকোড স্ক্যান</b><button class="btn btn-sm" id="sc-x">বন্ধ করুন</button></div><div class="bar-bot">${esc(o.hint || 'বারকোড ফ্রেমের ভেতরে ধরুন')}</div>`;
-      document.body.appendChild(el); this.el = el; syncLock();
-      const v = el.querySelector('video'); v.srcObject = this.stream; try { await v.play(); } catch (_) {}
+      el.innerHTML = `<video playsinline muted autoplay></video><div class="frame"></div><div class="bar-top"><b>বারকোড স্ক্যান</b><button type="button" class="btn btn-sm" id="sc-x">বন্ধ করুন</button></div><div class="sc-msg hidden" id="sc-msg"></div><div class="bar-bot">${esc(o.hint || 'বারকোড ফ্রেমের ভেতরে ধরুন')}</div>`;
+      document.body.appendChild(el); this.el = el; this.last = ''; this.lastT = 0; this.busy = false; syncLock();
+      const v = el.querySelector('video'); v.srcObject = stream; try { await v.play(); } catch (_) {}
       el.querySelector('#sc-x').onclick = () => this.close();
       this.timer = setInterval(async () => {
-        if (!this.el || v.readyState < 2) return;
+        if (!this.el || this.busy || v.readyState < 2) return;
+        this.busy = true;
         try {
-          const codes = await det.detect(v); if (!codes.length) return;
-          const code = codes[0].rawValue; const now = Date.now();
+          const codes = await det.detect(v);
+          if (!this.el || tok !== this.tok || !codes.length) return;
+          const code = String(codes[0].rawValue || '').trim(); if (!code) return;
+          const now = Date.now();
           if (code === this.last && now - this.lastT < 1800) return;
           this.last = code; this.lastT = now; Sound.play('beep'); if (navigator.vibrate) navigator.vibrate(40);
-          cb(code); if (!o.continuous) this.close();
-        } catch (_) {}
+          const keep = cb(code);
+          if (!o.continuous && keep !== false) this.close();
+        } catch (_) {} finally { this.busy = false; }
       }, 220);
     },
+    // ক্যামেরা স্ক্রিনের ওপরেই বার্তা দেখায় (toast ক্যামেরার নিচে ঢাকা পড়ে যেত)
+    flash(msg, kind) {
+      const m = this.el && this.el.querySelector('#sc-msg'); if (!m) { toast(msg); return; }
+      m.textContent = msg; m.className = 'sc-msg ' + (kind || '');
+      clearTimeout(this.msgT); this.msgT = setTimeout(() => { if (m) m.classList.add('hidden'); }, 2200);
+    },
     close() {
-      clearInterval(this.timer); this.timer = null;
+      this.tok++; this.opening = false; clearInterval(this.timer); this.timer = null; clearTimeout(this.msgT);
       if (this.stream) { this.stream.getTracks().forEach(t => t.stop()); this.stream = null; }
-      if (this.el) { this.el.remove(); this.el = null; } syncLock();
+      if (this.el) { const v = this.el.querySelector('video'); if (v) v.srcObject = null; this.el.remove(); this.el = null; }
+      this.busy = false; syncLock();
     }
   };
+  // অ্যাপ ব্যাকগ্রাউন্ডে গেলে ক্যামেরা ছেড়ে দিন
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && Scanner.isOpen()) Scanner.close(); });
 
   // ================= PIN লক =================
   async function hashPin(pin, salt) {
@@ -45,7 +65,7 @@
     let h1 = 5381, h2 = 52711; for (let i = 0; i < s.length; i++) { h1 = (h1 * 33) ^ s.charCodeAt(i); h2 = (h2 * 33) ^ s.charCodeAt(s.length - 1 - i); } return 'x' + (h1 >>> 0).toString(16) + (h2 >>> 0).toString(16);
   }
   const Lock = window.Lock = {
-    hiddenAt: 0, el: null,
+    hiddenAt: 0, el: null, fails: 0, until: 0,
     has() { return !!DB.settings.pinHash; },
     init(start) { if (this.has()) this.show(start); else start(); },
     lockNow() { if (!this.has()) { toast('আগে সেটিংসে PIN সেট করুন'); return; } this.show(() => {}); },
@@ -63,12 +83,16 @@
       el.querySelectorAll('[data-k]').forEach(b => b.onclick = async () => {
         const k = b.dataset.k; if (k === '⌫') pin = pin.slice(0, -1); else if (pin.length < 4) pin += k; paint();
         if (pin.length === 4) {
+          if (Date.now() < this.until) { toast('⚠️ বেশি ভুল হয়েছে — ' + Math.ceil((this.until - Date.now()) / 1000) + ' সেকেন্ড পরে চেষ্টা করুন'); pin = ''; paint(); return; }
           const h = await hashPin(pin, DB.settings.pinSalt);
-          if (h === DB.settings.pinHash) { el.remove(); this.el = null; syncLock(); done && done(); }
-          else { const d = el.querySelector('#lk-dots'); d.classList.add('shake'); if (navigator.vibrate) navigator.vibrate(120); setTimeout(() => { d.classList.remove('shake'); pin = ''; paint(); }, 450); }
+          if (h === DB.settings.pinHash) { this.fails = 0; el.remove(); this.el = null; syncLock(); done && done(); }
+          else {
+            if (++this.fails >= 5) { this.until = Date.now() + 30000; this.fails = 0; toast('⚠️ ৫ বার ভুল — ৩০ সেকেন্ড অপেক্ষা করুন'); }
+            const d = el.querySelector('#lk-dots'); d.classList.add('shake'); if (navigator.vibrate) navigator.vibrate(120); setTimeout(() => { d.classList.remove('shake'); pin = ''; paint(); }, 450);
+          }
         }
       });
-      el.querySelector('#lk-forgot').onclick = () => askConfirm('PIN ভুলে গেলে একমাত্র উপায় সব ডেটা মুছে নতুন করে শুরু করা (মুছার আগে ব্যাকআপ ফাইল ডাউনলোড হবে, পরে রিস্টোর করা যাবে)। করবেন?', () => { DB.settings.pinHash = ''; DB.settings.pinSalt = ''; C.save('settings'); wipeAllData(); }, { danger: true, yes: 'ডেটা মুছে রিসেট', title: 'PIN রিসেট' });
+      el.querySelector('#lk-forgot').onclick = () => askConfirm('PIN ভুলে গেলে একমাত্র উপায় সব ডেটা মুছে নতুন করে শুরু করা (মুছার আগে ব্যাকআপ ফাইল ডাউনলোড হবে, পরে রিস্টোর করা যাবে)। করবেন?', () => { wipeAllData(); }, { danger: true, yes: 'ডেটা মুছে রিসেট', title: 'PIN রিসেট' });
     },
     setup() {
       const has = this.has();
@@ -204,12 +228,14 @@
         <div class="kv"><span class="muted">শেষ ব্যাকআপ</span><b>${last ? C.fmtDT(new Date(last).toISOString()) : 'কখনো নেওয়া হয়নি'}</b></div><div class="kv"><span class="muted">ব্যবহৃত স্টোরেজ</span><b class="${kb > 4000 ? 'bad' : ''}">${kb} KB / প্রায় ৫০০০ KB</b></div>
         <div class="grid2 mt3"><button class="btn btn-primary" onclick="exportData()"><i class="fas fa-cloud-arrow-down"></i> ব্যাকআপ</button><label class="btn btn-ghost" style="cursor:pointer"><i class="fas fa-file-import"></i> রিস্টোর<input type="file" accept="application/json,.json" class="hidden" onchange="importData(this)"></label></div>
         <button class="btn btn-danger-soft btn-block mt2" onclick="wipeAllData()"><i class="fas fa-trash"></i> সব ডেটা মুছুন</button></div>
-      <div class="tc muted xs">ProPOS v7 · ফ্রি অফলাইন POS · ডেটা আপনার ডিভাইসেই থাকে</div>`;
+      <div class="card pad mb3"><div class="sec-title"><i class="fas fa-scale-balanced ptext"></i> আইনি তথ্য</div>
+        <div class="grid2"><a class="btn btn-ghost" href="privacy.html" target="_blank" rel="noopener"><i class="fas fa-user-shield"></i> প্রাইভেসি পলিসি</a><a class="btn btn-ghost" href="terms.html" target="_blank" rel="noopener"><i class="fas fa-file-contract"></i> শর্তাবলী</a></div></div>
+      <div class="tc muted xs">ProPOS v8 · ফ্রি অফলাইন POS · ডেটা আপনার ডিভাইসেই থাকে<br>© MH IT Limited · <a href="privacy.html" target="_blank" rel="noopener">প্রাইভেসি পলিসি</a> · <a href="terms.html" target="_blank" rel="noopener">শর্তাবলী</a></div>`;
       Theme.apply(); Printer.ui(); if (window.Cloud) Cloud.renderUI();
     },
     save() {
       const s = DB.settings; s.shopName = $('st-name').value.trim() || 'আমার দোকান'; s.shopAddress = $('st-addr').value.trim(); s.shopPhone = $('st-phone').value.trim();
-      s.defaultTax = num($('st-tax').value); s.footer = $('st-foot').value.trim(); s.invPrefix = $('st-pre').value.trim(); s.paper = $('st-paper').value; s.lowStockDefault = num($('st-low').value) || 5;
+      s.defaultTax = Math.max(0, num($('st-tax').value)); s.footer = $('st-foot').value.trim(); s.invPrefix = $('st-pre').value.trim(); s.paper = $('st-paper').value; s.lowStockDefault = num($('st-low').value) || 5;
       C.save('settings'); POS.taxInit(); POS.renderCart(); toast('সেটিংস সংরক্ষিত ✓');
     }
   };

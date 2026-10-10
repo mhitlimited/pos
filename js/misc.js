@@ -68,7 +68,7 @@
     // ---- ফেরত ----
     ret(saleId) {
       const s = C.findSale(saleId); if (!s) return;
-      const rows = s.items.map(i => ({ ...i, left: i.qty - C.returnedQty(s.id, i.id) })).filter(i => i.left > 0);
+      const rows = s.items.map(i => ({ ...i, left: r2(i.qty - C.returnedQty(s.id, i.id)) })).filter(i => i.left > 0);
       if (!rows.length) { toast('এই বিলের সব পণ্য আগেই ফেরত নেওয়া হয়েছে'); return; }
       const canDue = !!s.customerId;
       const m = Modal.open({ title: 'পণ্য ফেরত — #' + C.invLabel(s), body: `
@@ -134,15 +134,16 @@
   // ================= খরচ =================
   const CATS = ['দোকান ভাড়া', 'বিদ্যুৎ/পানি/গ্যাস', 'বেতন', 'পরিবহন', 'মোবাইল/ইন্টারনেট', 'মেরামত', 'নাস্তা/চা', 'অন্যান্য'];
   const Exp = window.Exp = {
-    from: C.monthStart(), to: C.todayKey(),
+    from: '', to: '',
+    get F() { return this.from || C.monthStart(); }, get T() { return this.to || C.todayKey(); },
     render() {
       $('view').innerHTML = `<div class="page-head"><div><h2>খরচ</h2><p>দৈনিক ও মাসিক খরচের হিসাব</p></div><button class="btn btn-primary" onclick="Exp.add()"><i class="fas fa-plus"></i> নতুন খরচ</button></div>
-      <div class="card pad-s mb3"><div class="grid2"><div><label class="label">থেকে</label><input type="date" class="input" value="${this.from}" onchange="Exp.from=this.value;Exp.list()"></div><div><label class="label">পর্যন্ত</label><input type="date" class="input" value="${this.to}" onchange="Exp.to=this.value;Exp.list()"></div></div></div>
+      <div class="card pad-s mb3"><div class="grid2"><div><label class="label">থেকে</label><input type="date" class="input" value="${this.F}" onchange="Exp.from=this.value;Exp.list()"></div><div><label class="label">পর্যন্ত</label><input type="date" class="input" value="${this.T}" onchange="Exp.to=this.value;Exp.list()"></div></div></div>
       <div id="ex-sum"></div><div class="card" id="ex-list"></div>`;
       this.list();
     },
     list() {
-      const arr = DB.expenses.filter(e => C.inRange(e.date, this.from, this.to)).sort((a, b) => a.date < b.date ? 1 : -1);
+      const arr = DB.expenses.filter(e => C.inRange(e.date, this.F, this.T)).sort((a, b) => a.date < b.date ? 1 : -1);
       const tot = r2(arr.reduce((s, e) => s + num(e.amount), 0)); const by = {};
       arr.forEach(e => by[e.category] = r2((by[e.category] || 0) + num(e.amount)));
       $('ex-sum').innerHTML = `<div class="stats"><div class="stat hl"><div class="k">মোট খরচ</div><div class="v">${money(tot)}</div></div><div class="stat"><div class="k">এন্ট্রি</div><div class="v">${arr.length}</div></div></div>` +
