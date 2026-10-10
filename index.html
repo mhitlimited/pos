@@ -3,638 +3,76 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ProPOS - প্রফেশনাল পয়েন্ট অফ সেল</title>
-    <meta name="description" content="ProPOS - অফলাইনে চলা প্রফেশনাল পয়েন্ট অফ সেল সফটওয়্যার">
+    <title>ProPOS - ফ্রি পয়েন্ট অফ সেল</title>
+    <meta name="description" content="ProPOS - অফলাইনে চলা ফ্রি বাংলা পয়েন্ট অফ সেল সফটওয়্যার">
+    <script>(function(){try{var m=localStorage.getItem('propos_theme')||'auto';if(m==='dark'||(m==='auto'&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}})()</script>
 
-    <!-- PWA -->
     <link rel="manifest" href="manifest.webmanifest">
     <meta name="theme-color" content="#4f46e5">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-title" content="ProPOS">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
     <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 
-    <!-- Libraries -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="js/tailwind-config.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@300;400;500;600;700&display=swap">
-
-    <!-- Critical CSS: style.css লোড না হলেও কার্ট/মেনু যেন খোলা অবস্থায় না থাকে -->
-    <style>
-        .drawer{transform:translateX(100%);transition:transform .3s cubic-bezier(.4,.0,.2,1)}
-        .drawer.open{transform:translateX(0)}
-    </style>
-
-    <!-- App CSS -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+Bengali:wght@400;500;600;700&display=swap">
+    <style>.hidden{display:none!important}.drawer{position:fixed;top:0;height:100%;transition:transform .28s}.drawer.left{left:0;transform:translateX(-100%)}.drawer.right{right:0;transform:translateX(100%)}.drawer.open{transform:none}</style>
     <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-slate-100 text-slate-800 min-h-screen overflow-x-hidden">
+<body data-view="pos">
 
-<!-- SIDEBAR Desktop -->
-<aside id="sidebar" class="fixed left-0 top-0 h-full w-64 bg-white border-r border-slate-200 z-40 hidden lg:flex flex-col shadow-sm">
-    <div class="p-5 border-b border-slate-100">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center text-white shadow-lg shadow-primary-500/30">
-                <i class="fas fa-cash-register text-lg"></i>
-            </div>
-            <div>
-                <h1 class="font-bold text-lg text-slate-800 leading-tight">ProPOS</h1>
-                <p class="text-xs text-slate-400">Professional POS</p>
-            </div>
-        </div>
-    </div>
-    
-    <nav class="flex-1 p-3 space-y-1 overflow-y-auto">
-        <button onclick="showView('pos')" data-view="pos" class="sidebar-link active w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all">
-            <i class="fas fa-store w-5 text-center"></i> বিক্রয় কাউন্টার
-        </button>
-        <button onclick="showView('products')" data-view="products" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-600">
-            <i class="fas fa-boxes-stacked w-5 text-center"></i> পণ্য ব্যবস্থাপনা
-        </button>
-        <button onclick="showView('history')" data-view="history" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-600">
-            <i class="fas fa-receipt w-5 text-center"></i> বিক্রয় ইতিহাস
-        </button>
-        <button onclick="showView('dashboard')" data-view="dashboard" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-600">
-            <i class="fas fa-chart-pie w-5 text-center"></i> ড্যাশবোর্ড
-        </button>
-        <button onclick="showView('settings')" data-view="settings" class="sidebar-link w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-600">
-            <i class="fas fa-cog w-5 text-center"></i> সেটিংস
-        </button>
-    </nav>
-    
-    <div class="p-4 border-t border-slate-100 space-y-2">
-        <button onclick="UI.exitApp()" class="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold bg-red-50 hover:bg-red-100 text-red-600 transition">
-            <i class="fas fa-power-off"></i> Exit
-        </button>
-        <div id="bt-status-sidebar" class="flex items-center gap-2 text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2">
-            <span class="w-2 h-2 rounded-full bg-slate-300" id="bt-dot"></span>
-            <span id="bt-status-text">প্রিন্টার সংযুক্ত নয়</span>
-        </div>
+<!-- ডেস্কটপ সাইডবার -->
+<aside class="sidebar" id="sidebar">
+    <div class="brand"><div class="logo"><i class="fas fa-cash-register"></i></div><div><div class="fw7" style="font-size:17px">ProPOS</div><div class="xs muted">ফ্রি পয়েন্ট অফ সেল</div></div></div>
+    <nav class="nav" id="nav-desk"></nav>
+    <div style="padding:10px;border-top:1px solid var(--border)" class="flex col gap2">
+        <button class="btn btn-primary btn-block" onclick="exportData()"><i class="fas fa-cloud-arrow-down"></i> ব্যাকআপ নিন</button>
+        <div class="grid2"><button class="btn btn-ghost" onclick="Theme.toggle()"><i class="theme-ico fas fa-moon"></i> থিম</button><button class="btn btn-ghost" onclick="Lock.lockNow()"><i class="fas fa-lock"></i> লক</button></div>
     </div>
 </aside>
 
-<!-- MOBILE HEADER -->
-<header class="lg:hidden sticky top-0 z-30 bg-white border-b border-slate-200 px-4 py-3 flex items-center justify-between shadow-sm">
-    <div class="flex items-center gap-2">
-        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center text-white">
-            <i class="fas fa-cash-register text-sm"></i>
-        </div>
-        <span class="font-bold text-slate-800">ProPOS</span>
-    </div>
-    <div class="flex items-center gap-1">
-        <button onclick="UI.exitApp()" class="p-2 rounded-lg hover:bg-red-50" title="Exit">
-            <i class="fas fa-power-off text-red-500"></i>
-        </button>
-        <button onclick="toggleMobileNav()" class="p-2 rounded-lg hover:bg-slate-100">
-            <i class="fas fa-bars text-slate-600"></i>
-        </button>
-        <button onclick="toggleCart()" class="pos-only relative p-2 rounded-lg hover:bg-slate-100">
-            <i class="fas fa-shopping-bag text-slate-600"></i>
-            <span id="cart-badge" class="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 w-4 flex items-center justify-center hidden">0</span>
-        </button>
+<!-- মোবাইল টপবার -->
+<header class="topbar">
+    <div class="flex items-c gap2"><div class="logo" style="width:34px;height:34px;font-size:14px"><i class="fas fa-cash-register"></i></div><b style="font-size:17px">ProPOS</b></div>
+    <div class="flex items-c">
+        <button class="icon-btn" onclick="exportData()" title="ব্যাকআপ"><i class="fas fa-cloud-arrow-down"></i></button>
+        <button class="icon-btn" onclick="Theme.toggle()" title="ডার্ক/লাইট"><i class="theme-ico fas fa-moon"></i></button>
+        <button class="icon-btn pos-only" onclick="App.toggleCart()" title="কার্ট"><i class="fas fa-bag-shopping"></i><span class="cart-badge hidden" id="cart-badge">0</span></button>
+        <button class="icon-btn" onclick="App.toggleNav()" title="মেনু"><i class="fas fa-bars"></i></button>
     </div>
 </header>
 
-<!-- Mobile Nav -->
-<div id="mobile-nav-overlay" class="fixed inset-0 bg-black/40 z-40 hidden lg:hidden" onclick="toggleMobileNav()"></div>
-<div id="mobile-nav" class="drawer fixed top-0 left-0 h-full w-72 bg-white z-50 shadow-2xl flex flex-col lg:hidden" style="transform:translateX(-100%)">
-    <div class="p-5 border-b flex justify-between items-center">
-        <div class="flex items-center gap-3">
-            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-600 to-primary-500 flex items-center justify-center text-white">
-                <i class="fas fa-cash-register"></i>
-            </div>
-            <span class="font-bold">ProPOS</span>
-        </div>
-        <button onclick="toggleMobileNav()" class="text-2xl text-slate-400">&times;</button>
+<main class="main"><div id="view" class="view"></div></main>
+
+<div id="scrim" class="scrim hidden" onclick="App.closeDrawers()"></div>
+
+<!-- মোবাইল মেনু -->
+<aside id="mobile-nav" class="drawer left">
+    <div class="brand"><div class="logo"><i class="fas fa-cash-register"></i></div><div class="grow"><div class="fw7" style="font-size:17px">ProPOS</div><div class="xs muted">ফ্রি পয়েন্ট অফ সেল</div></div><button class="icon-btn" onclick="App.closeDrawers()"><i class="fas fa-xmark"></i></button></div>
+    <nav class="nav" id="nav-mob"></nav>
+    <div style="padding:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--border)" class="flex col gap2">
+        <button class="btn btn-primary btn-block" onclick="App.closeDrawers();exportData()"><i class="fas fa-cloud-arrow-down"></i> ব্যাকআপ নিন</button>
+        <div class="grid2"><button class="btn btn-ghost" onclick="Theme.toggle()"><i class="theme-ico fas fa-moon"></i> থিম</button><button class="btn btn-ghost" onclick="App.closeDrawers();Lock.lockNow()"><i class="fas fa-lock"></i> লক</button></div>
     </div>
-    <nav class="flex-1 p-3 space-y-1">
-        <button onclick="showView('pos');toggleMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium hover:bg-slate-50">
-            <i class="fas fa-store w-5"></i> বিক্রয় কাউন্টার
-        </button>
-        <button onclick="showView('products');toggleMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium hover:bg-slate-50">
-            <i class="fas fa-boxes-stacked w-5"></i> পণ্য ব্যবস্থাপনা
-        </button>
-        <button onclick="showView('history');toggleMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium hover:bg-slate-50">
-            <i class="fas fa-receipt w-5"></i> বিক্রয় ইতিহাস
-        </button>
-        <button onclick="showView('dashboard');toggleMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium hover:bg-slate-50">
-            <i class="fas fa-chart-pie w-5"></i> ড্যাশবোর্ড
-        </button>
-        <button onclick="showView('settings');toggleMobileNav()" class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium hover:bg-slate-50">
-            <i class="fas fa-cog w-5"></i> সেটিংস
-        </button>
-    </nav>
-    <div class="p-3 border-t" style="padding-bottom:calc(.75rem + env(safe-area-inset-bottom))">
-        <button onclick="UI.exitApp()" class="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl text-sm font-semibold bg-red-50 text-red-600">
-            <i class="fas fa-power-off"></i> Exit
-        </button>
-    </div>
-</div>
+</aside>
 
-<!-- MAIN -->
-<main class="lg:ml-64 min-h-screen">
-    <div class="p-3 sm:p-5 max-w-7xl mx-auto">
+<!-- মোবাইল কার্ট -->
+<aside id="mobile-cart" class="drawer right">
+    <div class="flex between items-c" style="padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top));border-bottom:1px solid var(--border)"><b style="font-size:17px">বিক্রয় কার্ট</b><button class="icon-btn" onclick="App.closeDrawers()"><i class="fas fa-xmark"></i></button></div>
+    <div id="cart-mobile" style="padding:14px;overflow-y:auto;flex:1;padding-bottom:calc(14px + env(safe-area-inset-bottom))"></div>
+</aside>
 
-        <!-- POS VIEW -->
-        <div id="view-pos" class="view">
-            <div class="flex flex-col xl:flex-row gap-4">
-                <div class="flex-1 min-w-0">
-                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-3 mb-4 sticky top-0 lg:top-0 z-20">
-                        <div class="relative">
-                            <i class="fas fa-search absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"></i>
-                            <input type="text" id="search-input" placeholder="পণ্যের নাম বা বারকোড দিয়ে খুঁজুন..." 
-                                class="w-full pl-11 pr-4 py-3 bg-slate-50 border-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm"
-                                oninput="filterProducts()" autofocus>
-                        </div>
-                        <div id="category-filters" class="flex gap-2 overflow-x-auto mt-3 pb-0.5"></div>
-                    </div>
-                    
-                    <div id="product-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 2xl:grid-cols-5 gap-3"></div>
-                    <div id="no-products" class="hidden text-center py-16">
-                        <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <i class="fas fa-box-open text-2xl text-slate-300"></i>
-                        </div>
-                        <p class="text-slate-400 font-medium">কোনো পণ্য পাওয়া যায়নি</p>
-                        <button onclick="showView('products')" class="mt-3 text-primary-600 text-sm font-medium hover:underline">পণ্য যোগ করুন →</button>
-                    </div>
-                </div>
+<div id="toast" class="hidden"></div>
 
-                <!-- Cart Desktop -->
-                <div class="hidden xl:block w-[340px] shrink-0">
-                    <div class="bg-white rounded-2xl shadow-sm border border-slate-100 sticky top-5 overflow-hidden">
-                        <div class="bg-gradient-to-r from-primary-600 to-primary-500 text-white px-5 py-4 flex justify-between items-center">
-                            <h2 class="font-semibold flex items-center gap-2"><i class="fas fa-shopping-bag"></i> কার্ট <span id="cart-count-desk" class="bg-white/20 text-xs px-2 py-0.5 rounded-full">0</span></h2>
-                            <button onclick="clearCart()" class="text-xs bg-white/15 hover:bg-white/25 px-2.5 py-1 rounded-lg transition">মুছুন</button>
-                        </div>
-                        
-                        <div id="cart-items" class="max-h-[280px] overflow-y-auto p-3 space-y-2 min-h-[120px]">
-                            <div class="text-center py-10 text-slate-300 text-sm">কার্ট খালি</div>
-                        </div>
-                        
-                        <div class="border-t border-slate-100 p-4 space-y-2.5 bg-slate-50/50">
-                            <div class="flex justify-between text-sm text-slate-500">
-                                <span>সাবটোটাল</span>
-                                <span id="subtotal" class="font-medium text-slate-700">৳০</span>
-                            </div>
-                            <div class="flex justify-between text-sm items-center">
-                                <span class="text-slate-500">ডিসকাউন্ট</span>
-                                <div class="flex items-center gap-1.5">
-                                    <input type="number" id="discount-input" value="0" min="0" class="w-16 bg-white border border-slate-200 rounded-lg px-2 py-1 text-right text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none" oninput="updateTotals()">
-                                    <select id="discount-type" class="bg-white border border-slate-200 rounded-lg px-1.5 py-1 text-sm focus:outline-none" onchange="updateTotals()">
-                                        <option value="percent">%</option>
-                                        <option value="fixed">৳</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="flex justify-between text-sm items-center">
-                                <span class="text-slate-500">ট্যাক্স</span>
-                                <div class="flex items-center gap-1">
-                                    <input type="number" id="tax-input" value="0" min="0" class="w-16 bg-white border border-slate-200 rounded-lg px-2 py-1 text-right text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none" oninput="updateTotals()">
-                                    <span class="text-sm text-slate-400">%</span>
-                                </div>
-                            </div>
-                            <div class="flex justify-between items-center pt-2 border-t border-slate-200">
-                                <span class="font-semibold text-slate-700">মোট</span>
-                                <span id="grand-total" class="text-xl font-bold text-primary-600">৳০</span>
-                            </div>
-                            <button onclick="openCheckout()" id="checkout-btn" disabled
-                                class="w-full bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white font-semibold py-3.5 rounded-xl mt-1 disabled:opacity-40 disabled:cursor-not-allowed transition shadow-lg shadow-primary-500/25">
-                                <i class="fas fa-arrow-right mr-2"></i>চেকআউট
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- PRODUCTS VIEW -->
-        <div id="view-products" class="view hidden">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
-                <div>
-                    <h2 class="text-xl font-bold text-slate-800">পণ্য ব্যবস্থাপনা</h2>
-                    <p class="text-sm text-slate-400 mt-0.5">সকল পণ্য যোগ, সম্পাদনা ও স্টক ম্যানেজ করুন</p>
-                </div>
-                <button onclick="openProductModal()" class="bg-primary-600 hover:bg-primary-700 text-white px-5 py-2.5 rounded-xl text-sm font-semibold shadow-lg shadow-primary-500/25 transition flex items-center gap-2">
-                    <i class="fas fa-plus"></i> নতুন পণ্য যোগ
-                </button>
-            </div>
-            
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                <div class="p-4 border-b border-slate-100">
-                    <div class="relative max-w-sm">
-                        <i class="fas fa-search absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
-                        <input type="text" id="product-search" placeholder="পণ্য সার্চ..." class="w-full pl-9 pr-4 py-2 bg-slate-50 border-0 rounded-lg text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none" oninput="renderProductsTable()">
-                    </div>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm">
-                        <thead>
-                            <tr class="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                                <th class="text-left p-4 font-semibold">পণ্য</th>
-                                <th class="text-left p-4 font-semibold">বারকোড</th>
-                                <th class="text-left p-4 font-semibold">ক্যাটাগরি</th>
-                                <th class="text-right p-4 font-semibold">ক্রয় মূল্য</th>
-                                <th class="text-right p-4 font-semibold">বিক্রয় মূল্য</th>
-                                <th class="text-right p-4 font-semibold">স্টক</th>
-                                <th class="text-center p-4 font-semibold">অ্যাকশন</th>
-                            </tr>
-                        </thead>
-                        <tbody id="products-table" class="divide-y divide-slate-50"></tbody>
-                    </table>
-                </div>
-                <div id="no-products-table" class="hidden text-center py-12 text-slate-400">
-                    <i class="fas fa-box-open text-3xl mb-3"></i>
-                    <p>এখনো কোনো পণ্য যোগ করা হয়নি</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- HISTORY VIEW -->
-        <div id="view-history" class="view hidden">
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-5">
-                <div>
-                    <h2 class="text-xl font-bold text-slate-800">বিক্রয় ইতিহাস</h2>
-                    <p class="text-sm text-slate-400 mt-0.5">সকল লেনদেনের রেকর্ড</p>
-                </div>
-                <div class="flex gap-2">
-                    <input type="date" id="history-date" class="border border-slate-200 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none" onchange="renderHistory()">
-                    <button onclick="document.getElementById('history-date').value='';renderHistory()" class="bg-slate-100 hover:bg-slate-200 px-4 py-2 rounded-xl text-sm font-medium transition">সব দেখুন</button>
-                </div>
-            </div>
-            <div id="history-list" class="space-y-3"></div>
-            <div id="no-history" class="hidden text-center py-16">
-                <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <i class="fas fa-receipt text-2xl text-slate-300"></i>
-                </div>
-                <p class="text-slate-400">কোনো বিক্রয় রেকর্ড নেই</p>
-            </div>
-        </div>
-
-        <!-- DASHBOARD VIEW -->
-        <div id="view-dashboard" class="view hidden">
-            <div class="mb-5">
-                <h2 class="text-xl font-bold text-slate-800">ড্যাশবোর্ড</h2>
-                <p class="text-sm text-slate-400 mt-0.5">ব্যবসার সারসংক্ষেপ</p>
-            </div>
-            
-            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-                <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
-                    <div class="w-10 h-10 rounded-xl bg-primary-50 flex items-center justify-center mb-3">
-                        <i class="fas fa-coins text-primary-600"></i>
-                    </div>
-                    <div class="text-2xl font-bold text-slate-800" id="stat-today-sales">৳০</div>
-                    <div class="text-xs text-slate-400 mt-1">আজকের বিক্রয়</div>
-                </div>
-                <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
-                    <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center mb-3">
-                        <i class="fas fa-shopping-cart text-emerald-600"></i>
-                    </div>
-                    <div class="text-2xl font-bold text-slate-800" id="stat-today-orders">০</div>
-                    <div class="text-xs text-slate-400 mt-1">আজকের অর্ডার</div>
-                </div>
-                <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
-                    <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center mb-3">
-                        <i class="fas fa-boxes text-blue-600"></i>
-                    </div>
-                    <div class="text-2xl font-bold text-slate-800" id="stat-total-products">০</div>
-                    <div class="text-xs text-slate-400 mt-1">মোট পণ্য</div>
-                </div>
-                <div class="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
-                    <div class="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center mb-3">
-                        <i class="fas fa-exclamation-triangle text-red-500"></i>
-                    </div>
-                    <div class="text-2xl font-bold text-slate-800" id="stat-low-stock">০</div>
-                    <div class="text-xs text-slate-400 mt-1">কম স্টক অ্যালার্ট</div>
-                </div>
-            </div>
-            
-            <div class="grid lg:grid-cols-2 gap-4">
-                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                    <h3 class="font-semibold text-slate-700 mb-4 flex items-center gap-2">
-                        <i class="fas fa-exclamation-circle text-amber-500"></i> কম স্টকের পণ্য
-                    </h3>
-                    <div id="low-stock-list" class="space-y-2"></div>
-                </div>
-                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                    <h3 class="font-semibold text-slate-700 mb-4 flex items-center gap-2">
-                        <i class="fas fa-fire text-orange-500"></i> সর্বাধিক বিক্রিত পণ্য
-                    </h3>
-                    <div id="top-selling-list" class="space-y-2"></div>
-                </div>
-            </div>
-        </div>
-
-        <!-- SETTINGS VIEW -->
-        <div id="view-settings" class="view hidden">
-            <div class="mb-5">
-                <h2 class="text-xl font-bold text-slate-800">সেটিংস</h2>
-                <p class="text-sm text-slate-400 mt-0.5">দোকানের তথ্য ও প্রিন্টার কনফিগারেশন</p>
-            </div>
-            
-            <div class="grid lg:grid-cols-2 gap-5">
-                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-                    <h3 class="font-semibold text-slate-700 mb-4 flex items-center gap-2">
-                        <i class="fas fa-store text-primary-600"></i> দোকানের তথ্য
-                    </h3>
-                    <div class="space-y-4">
-                        <div>
-                            <label class="block text-sm font-medium text-slate-600 mb-1.5">দোকানের নাম</label>
-                            <input type="text" id="shop-name" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none" placeholder="যেমন: আমার দোকান">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-600 mb-1.5">ঠিকানা</label>
-                            <textarea id="shop-address" rows="2" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none" placeholder="দোকানের ঠিকানা"></textarea>
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-600 mb-1.5">ফোন নম্বর</label>
-                            <input type="text" id="shop-phone" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none" placeholder="০১XXXXXXXXX">
-                        </div>
-                        <div>
-                            <label class="block text-sm font-medium text-slate-600 mb-1.5">ডিফল্ট ট্যাক্স (%)</label>
-                            <input type="number" id="default-tax" min="0" value="0" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none">
-                        </div>
-                        <button onclick="saveSettings()" class="w-full bg-primary-600 hover:bg-primary-700 text-white font-semibold py-2.5 rounded-xl transition">
-                            সংরক্ষণ করুন
-                        </button>
-                    </div>
-                </div>
-                
-                <!-- Bluetooth -->
-                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6">
-                    <h3 class="font-semibold text-slate-700 mb-4 flex items-center gap-2">
-                        <i class="fas fa-bluetooth text-blue-500"></i> ব্লুটুথ প্রিন্টার
-                    </h3>
-                    
-                    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5 text-sm text-amber-800">
-                        <p class="font-medium mb-1"><i class="fas fa-info-circle mr-1"></i> গুরুত্বপূর্ণ তথ্য</p>
-                        <ul class="list-disc list-inside space-y-1 text-amber-700 text-xs">
-                            <li>শুধুমাত্র Chrome / Edge ব্রাউজারে কাজ করে</li>
-                            <li>HTTPS অথবা localhost প্রয়োজন</li>
-                            <li>BLE (Bluetooth Low Energy) থার্মাল প্রিন্টার সাপোর্টেড</li>
-                            <li>সব ক্লাসিক ব্লুটুথ প্রিন্টার কাজ নাও করতে পারে</li>
-                        </ul>
-                    </div>
-                    
-                    <div class="flex items-center gap-3 mb-5 p-4 bg-slate-50 rounded-xl">
-                        <span class="w-3 h-3 rounded-full" id="bt-status-dot-settings" style="background:#cbd5e1"></span>
-                        <div>
-                            <div class="text-sm font-medium" id="bt-device-name">কোনো ডিভাইস সংযুক্ত নেই</div>
-                            <div class="text-xs text-slate-400" id="bt-connection-status">সংযোগের অপেক্ষায়</div>
-                        </div>
-                    </div>
-                    
-                    <div class="flex gap-3">
-                        <button onclick="connectBluetoothPrinter()" id="bt-connect-btn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 rounded-xl transition flex items-center justify-center gap-2">
-                            <i class="fas fa-bluetooth-b"></i> প্রিন্টার সংযুক্ত করুন
-                        </button>
-                        <button onclick="disconnectBluetooth()" id="bt-disconnect-btn" class="px-4 bg-slate-100 hover:bg-slate-200 text-slate-600 font-medium py-2.5 rounded-xl transition hidden">
-                            বিচ্ছিন্ন
-                        </button>
-                    </div>
-                    
-                    <div class="mt-5 pt-5 border-t border-slate-100">
-                        <p class="text-xs text-slate-400 leading-relaxed">
-                            সংযুক্ত হওয়ার পর চেকআউট রসিদে "ব্লুটুথ প্রিন্ট" বাটন সক্রিয় হবে। 
-                            প্রিন্টারের সাথে ম্যানুয়ালি পেয়ার করা থাকলে ভালো কাজ করে।
-                        </p>
-                    </div>
-                </div>
-                
-                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 lg:col-span-2">
-                    <h3 class="font-semibold text-slate-700 mb-4 flex items-center gap-2">
-                        <i class="fas fa-database text-slate-500"></i> ডেটা ব্যবস্থাপনা
-                    </h3>
-                    <label class="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-3 mb-4 cursor-pointer">
-                        <span class="text-sm font-medium text-slate-700"><i class="fas fa-volume-high mr-2 text-primary-600"></i> ক্লিক সাউন্ড</span>
-                        <input type="checkbox" id="sound-toggle" class="w-5 h-5 accent-indigo-600" checked onchange="Sound.setEnabled(this.checked)">
-                    </label>
-                    <div class="flex flex-wrap gap-3">
-                        <button onclick="exportData()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-medium transition">
-                            <i class="fas fa-file-export mr-1"></i> ব্যাকআপ ডাউনলোড
-                        </button>
-                        <label class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-2.5 rounded-xl text-sm font-medium transition cursor-pointer">
-                            <i class="fas fa-file-import mr-1"></i> ব্যাকআপ রিস্টোর
-                            <input type="file" accept="application/json,.json" class="hidden" onchange="importData(this)">
-                        </label>
-                        <button onclick="wipeAllData()" class="bg-red-50 hover:bg-red-100 text-red-600 px-4 py-2.5 rounded-xl text-sm font-medium transition">
-                            <i class="fas fa-trash mr-1"></i> সব ডেটা মুছুন
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</main>
-
-<!-- MOBILE CART -->
-<div id="cart-overlay" class="fixed inset-0 bg-black/40 z-40 hidden xl:hidden" onclick="toggleCart()"></div>
-<div id="mobile-cart" class="drawer fixed top-0 right-0 h-full w-full max-w-md bg-white z-50 shadow-2xl flex flex-col xl:hidden">
-    <div class="bg-gradient-to-r from-primary-600 to-primary-500 text-white px-5 py-4 flex justify-between items-center">
-        <h2 class="font-semibold text-lg"><i class="fas fa-shopping-bag mr-2"></i>কার্ট</h2>
-        <button onclick="toggleCart()" class="text-2xl leading-none">&times;</button>
-    </div>
-    <div id="mobile-cart-items" class="flex-1 overflow-y-auto p-4 space-y-2">
-        <div class="text-center py-12 text-slate-300 text-sm">কার্ট খালি</div>
-    </div>
-    <div class="border-t p-4 space-y-2.5 bg-slate-50">
-        <div class="flex justify-between text-sm text-slate-500">
-            <span>সাবটোটাল</span>
-            <span id="mobile-subtotal" class="font-medium text-slate-700">৳০</span>
-        </div>
-        <div class="flex justify-between text-sm items-center">
-            <span class="text-slate-500">ডিসকাউন্ট</span>
-            <div class="flex items-center gap-1.5">
-                <input type="number" id="mobile-discount-input" value="0" min="0" class="w-16 bg-white border border-slate-200 rounded-lg px-2 py-1 text-right text-sm" oninput="syncDiscount(this)">
-                <select id="mobile-discount-type" class="bg-white border border-slate-200 rounded-lg px-1 py-1 text-sm" onchange="syncDiscountType(this)">
-                    <option value="percent">%</option>
-                    <option value="fixed">৳</option>
-                </select>
-            </div>
-        </div>
-        <div class="flex justify-between text-sm items-center">
-            <span class="text-slate-500">ট্যাক্স</span>
-            <div class="flex items-center gap-1">
-                <input type="number" id="mobile-tax-input" value="0" min="0" class="w-16 bg-white border border-slate-200 rounded-lg px-2 py-1 text-right text-sm" oninput="syncTax(this)">
-                <span class="text-sm text-slate-400">%</span>
-            </div>
-        </div>
-        <div class="flex justify-between items-center pt-2 border-t border-slate-200">
-            <span class="font-semibold">মোট</span>
-            <span id="mobile-grand-total" class="text-xl font-bold text-primary-600">৳০</span>
-        </div>
-        <div class="flex gap-2 pt-1">
-            <button onclick="clearCart()" class="flex-1 bg-slate-200 hover:bg-slate-300 py-3 rounded-xl font-medium text-sm">মুছুন</button>
-            <button onclick="openCheckout()" id="mobile-checkout-btn" disabled class="flex-1 bg-primary-600 hover:bg-primary-700 text-white font-semibold py-3 rounded-xl disabled:opacity-40 text-sm">চেকআউট</button>
-        </div>
-    </div>
-</div>
-
-<!-- PRODUCT MODAL -->
-<div id="product-modal" class="fixed inset-0 modal-backdrop z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-lg max-h-[92vh] overflow-y-auto shadow-2xl">
-        <div class="sticky top-0 bg-white border-b border-slate-100 px-5 py-4 flex justify-between items-center z-10">
-            <h3 id="product-modal-title" class="font-bold text-lg">নতুন পণ্য যোগ করুন</h3>
-            <button onclick="closeProductModal()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500">&times;</button>
-        </div>
-        <form id="product-form" class="p-5 space-y-4" onsubmit="saveProduct(event)">
-            <input type="hidden" id="product-id">
-            
-            <div class="flex items-center gap-4">
-                <div id="product-image-preview" class="w-20 h-20 rounded-xl bg-slate-100 border-2 border-dashed border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
-                    <i class="fas fa-image text-slate-300 text-xl"></i>
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-600 mb-1">পণ্যের ছবি (ঐচ্ছিক)</label>
-                    <input type="file" id="product-image" accept="image/*" class="text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-primary-50 file:text-primary-600 hover:file:bg-primary-100" onchange="previewImage(this)">
-                </div>
-            </div>
-            
-            <div>
-                <label class="block text-sm font-medium text-slate-600 mb-1.5">পণ্যের নাম *</label>
-                <input type="text" id="product-name" required class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none" placeholder="পণ্যের নাম লিখুন">
-            </div>
-            
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-sm font-medium text-slate-600 mb-1.5">বারকোড</label>
-                    <input type="text" id="product-barcode" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none" placeholder="স্ক্যান বা টাইপ">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-600 mb-1.5">ক্যাটাগরি</label>
-                    <input type="text" id="product-category" list="category-list" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none" placeholder="যেমন: খাবার">
-                    <datalist id="category-list"></datalist>
-                </div>
-            </div>
-            
-            <div class="grid grid-cols-2 gap-3">
-                <div>
-                    <label class="block text-sm font-medium text-slate-600 mb-1.5">ক্রয় মূল্য (৳)</label>
-                    <input type="number" id="product-cost" min="0" step="0.01" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none" placeholder="০">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-600 mb-1.5">বিক্রয় মূল্য (৳) *</label>
-                    <input type="number" id="product-price" required min="0" step="0.01" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none" placeholder="০">
-                </div>
-            </div>
-            
-            <div class="grid grid-cols-3 gap-3">
-                <div>
-                    <label class="block text-sm font-medium text-slate-600 mb-1.5">স্টক *</label>
-                    <input type="number" id="product-stock" required min="0" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-600 mb-1.5">মিন স্টক</label>
-                    <input type="number" id="product-min-stock" min="0" value="5" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-600 mb-1.5">ইউনিট</label>
-                    <select id="product-unit" class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none">
-                        <option value="পিস">পিস</option>
-                        <option value="কেজি">কেজি</option>
-                        <option value="লিটার">লিটার</option>
-                        <option value="প্যাকেট">প্যাকেট</option>
-                        <option value="বক্স">বক্স</option>
-                        <option value="কাপ">কাপ</option>
-                        <option value="বোতল">বোতল</option>
-                    </select>
-                </div>
-            </div>
-            
-            <div class="flex gap-3 pt-3">
-                <button type="button" onclick="closeProductModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 py-3 rounded-xl font-medium text-sm transition">বাতিল</button>
-                <button type="submit" class="flex-1 bg-primary-600 hover:bg-primary-700 text-white py-3 rounded-xl font-semibold text-sm transition">সংরক্ষণ করুন</button>
-            </div>
-        </form>
-    </div>
-</div>
-
-<!-- CHECKOUT MODAL -->
-<div id="checkout-modal" class="fixed inset-0 modal-backdrop z-50 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
-    <div class="bg-white rounded-t-2xl sm:rounded-2xl w-full max-w-md max-h-[92vh] overflow-y-auto shadow-2xl">
-        <div class="sticky top-0 bg-white border-b border-slate-100 px-5 py-4 flex justify-between items-center">
-            <h3 class="font-bold text-lg">চেকআউট</h3>
-            <button onclick="closeCheckout()" class="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500">&times;</button>
-        </div>
-        <div class="p-5 space-y-5">
-            <div class="bg-gradient-to-br from-primary-50 to-indigo-50 rounded-2xl p-5 text-center">
-                <div class="text-sm text-slate-500 mb-1">মোট পরিশোধযোগ্য</div>
-                <div id="checkout-total" class="text-3xl font-bold text-primary-600">৳০</div>
-            </div>
-            
-            <div>
-                <label class="block text-sm font-medium text-slate-600 mb-2">পেমেন্ট পদ্ধতি</label>
-                <div class="grid grid-cols-3 gap-2">
-                    <button type="button" onclick="selectPayment('cash')" id="pay-cash" class="payment-btn border-2 border-primary-500 bg-primary-50 text-primary-700 py-3 rounded-xl font-medium text-sm transition">
-                        <i class="fas fa-money-bill-wave block text-lg mb-1"></i>নগদ
-                    </button>
-                    <button type="button" onclick="selectPayment('card')" id="pay-card" class="payment-btn border-2 border-slate-200 py-3 rounded-xl font-medium text-sm transition">
-                        <i class="fas fa-credit-card block text-lg mb-1"></i>কার্ড
-                    </button>
-                    <button type="button" onclick="selectPayment('mobile')" id="pay-mobile" class="payment-btn border-2 border-slate-200 py-3 rounded-xl font-medium text-sm transition">
-                        <i class="fas fa-mobile-alt block text-lg mb-1"></i>মোবাইল
-                    </button>
-                </div>
-            </div>
-            
-            <div id="cash-section">
-                <label class="block text-sm font-medium text-slate-600 mb-1.5">গ্রাহকের থেকে পাওয়া টাকা</label>
-                <input type="number" id="cash-received" min="0" step="0.01" class="w-full border border-slate-200 rounded-xl px-4 py-3 text-lg focus:ring-2 focus:ring-primary-500 focus:outline-none" oninput="calculateChange()">
-                <div class="mt-2 flex justify-between text-sm">
-                    <span class="text-slate-500">ফেরত দিতে হবে</span>
-                    <span id="change-amount" class="font-bold text-emerald-600">৳০</span>
-                </div>
-            </div>
-            
-            <div>
-                <label class="block text-sm font-medium text-slate-600 mb-1.5">নোট (ঐচ্ছিক)</label>
-                <textarea id="sale-note" rows="2" class="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary-500 focus:outline-none" placeholder="কোনো বিশেষ নোট..."></textarea>
-            </div>
-            
-            <button onclick="completeSale()" class="w-full bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-700 hover:to-emerald-600 text-white font-bold py-3.5 rounded-xl text-base shadow-lg shadow-emerald-500/25 transition">
-                <i class="fas fa-check-circle mr-2"></i>বিক্রয় সম্পন্ন করুন
-            </button>
-        </div>
-    </div>
-</div>
-
-<!-- RECEIPT MODAL (পুরো স্ক্রিন — শুধু বিল দেখাবে) -->
-<div id="receipt-modal" class="fixed inset-0 z-[60] hidden flex flex-col bg-slate-100">
-    <div class="bg-white border-b border-slate-200 px-5 py-3 flex justify-between items-center shadow-sm" style="padding-top:calc(.75rem + env(safe-area-inset-top))">
-        <h3 class="font-bold text-lg">রসিদ</h3>
-        <button onclick="closeReceipt()" class="w-9 h-9 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-500 text-xl">&times;</button>
-    </div>
-    <div class="flex-1 overflow-y-auto p-4">
-        <div class="max-w-sm mx-auto bg-white rounded-2xl shadow-sm border border-slate-100">
-            <div id="receipt-content" class="p-5 receipt-paper text-sm"></div>
-        </div>
-    </div>
-    <div class="bg-white border-t border-slate-200 p-4 flex flex-col gap-2" style="padding-bottom:calc(1rem + env(safe-area-inset-bottom))">
-        <div class="flex gap-2 max-w-sm mx-auto w-full">
-            <button onclick="printReceiptBrowser()" class="flex-1 bg-primary-600 hover:bg-primary-700 text-white py-2.5 rounded-xl font-medium text-sm transition">
-                <i class="fas fa-print mr-1"></i> ব্রাউজার প্রিন্ট
-            </button>
-            <button onclick="printReceiptBluetooth()" id="bt-print-btn" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2.5 rounded-xl font-medium text-sm transition disabled:opacity-40" disabled>
-                <i class="fas fa-bluetooth-b mr-1"></i> ব্লুটুথ প্রিন্ট
-            </button>
-        </div>
-        <button onclick="closeReceipt()" class="max-w-sm mx-auto w-full bg-slate-100 hover:bg-slate-200 py-2.5 rounded-xl font-medium text-sm transition">নতুন বিক্রয়</button>
-    </div>
-</div>
-
-<div id="print-area" class="hidden"></div>
-
-<div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white px-5 py-3 rounded-full shadow-xl z-[90] hidden text-sm font-medium transition-all max-w-[90vw]"></div>
-
-
-
-<!-- App JS -->
-<script src="js/app.js"></script>
+<script src="js/core.js"></script>
 <script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+<script src="js/people.js"></script>
+<script src="js/misc.js"></script>
+<script src="js/settings.js"></script>
 <script src="js/pwa.js"></script>
 </body>
 </html>
