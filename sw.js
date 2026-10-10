@@ -1,37 +1,100 @@
-/* ProPOS Service Worker — bump CACHE_VERSION on new release */
-const CACHE_VERSION = 'v8.3';
+/* ProPOS Service Worker — network-first, aggressive cache refresh (v9)
+   App data lives in localStorage + optional Google Drive.
+   SW cache is only a short offline fallback and is replaced on every deploy. */
+const CACHE_VERSION = 'v9';
 const APP_CACHE = `propos-app-${CACHE_VERSION}`;
 const CDN_CACHE = `propos-cdn-${CACHE_VERSION}`;
-const APP_SHELL = ['./', './index.html', './privacy.html', './terms.html', './style.css', './manifest.webmanifest',
-  './js/core.js', './js/ui.js', './js/app.js', './js/people.js', './js/misc.js', './js/settings.js', './js/config.js', './js/cloud.js', './js/pwa.js',
-  './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'];
+
+const APP_SHELL = [
+  './', './index.html', './privacy.html', './terms.html', './style.css', './manifest.webmanifest',
+  './js/core.js', './js/ui.js', './js/app.js', './js/people.js', './js/misc.js', './js/settings.js',
+  './js/config.js', './js/cloud.js', './js/pwa.js',
+  './icons/icon-192.png', './icons/icon-512.png', './icons/maskable-512.png', './icons/apple-touch-icon.png'
+];
 const CDN_HOSTS = ['cdnjs.cloudflare.com', 'fonts.googleapis.com', 'fonts.gstatic.com'];
 
-self.addEventListener('install', e => {
-  e.waitUntil(caches.open(APP_CACHE)
-    .then(c => Promise.all(APP_SHELL.map(u => c.add(u).catch(() => null)))));
+self.addEventListener('install', event => {
+  // Take over immediately so users never stay on a broken old SW
+  self.skipWaiting();
+  event.waitUntil(
+    caches.open(APP_CACHE).then(cache =>
+      Promise.all(APP_SHELL.map(u => cache.add(u).catch(() => null)))
+    )
+  );
 });
-self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k.startsWith('propos-') && k !== APP_CACHE && k !== CDN_CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim()));
+
+self.addEventListener('activate', event => {
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    // Delete every old propos cache — keep only current version
+    await Promise.all(
+      keys
+        .filter(k => k.startsWith('propos-') && k !== APP_CACHE && k !== CDN_CACHE)
+        .map(k => caches.delete(k))
+    );
+    await self.clients.claim();
+  })());
 });
-self.addEventListener('message', e => { if (e.data === 'SKIP_WAITING') self.skipWaiting(); });
-self.addEventListener('fetch', event => {
-  const req = event.request; if (req.method !== 'GET') return;
-  const url = new URL(req.url);
-  if (req.mode === 'navigate') {
-    const isApp = /\/(index\.html)?$/.test(url.pathname);
-    event.respondWith(fetch(req).then(res => {
-      if (res && res.ok && url.origin === self.location.origin) { const copy = res.clone(); caches.open(APP_CACHE).then(c => c.put(isApp ? './index.html' : req, copy)); }
-      return res;
-    }).catch(() => (isApp ? caches.match('./index.html') : caches.match(req, { ignoreSearch: true }).then(r => r || caches.match('./index.html')))));
+
+self.addEventListener('message', event => {
+  const data = event.data;
+  if (data === 'SKIP_WAITING') {
+    self.skipWaiting();
     return;
   }
-  if (url.origin === self.location.origin) { event.respondWith(swr(req, APP_CACHE)); return; }
-  if (CDN_HOSTS.includes(url.hostname)) event.respondWith(swr(req, CDN_CACHE));
+  if (data === 'CLEAR_CACHES') {
+    event.waitUntil((async () => {
+      const keys = await caches.keys();
+      await Promise.all(keys.filter(k => k.startsWith('propos-')).map(k => caches.delete(k)));
+      const cache = await caches.open(APP_CACHE);
+      await Promise.all(APP_SHELL.map(u => cache.add(u).catch(() => null)));
+    })());
+  }
 });
-function swr(request, name) {
-  return caches.open(name).then(cache => cache.match(request).then(cached => {
-    const net = fetch(request).then(res => { if (res && (res.ok || res.type === 'opaque')) cache.put(request, res.clone()); return res; }).catch(() => cached);
-    return cached || net;
-  }));
+
+/** Network-first: always try network, fall back to cache only if offline */
+function networkFirst(request, cacheName) {
+  return fetch(request)
+    .then(res => {
+      if (res && res.ok && (request.method === 'GET')) {
+        const copy = res.clone();
+        caches.open(cacheName).then(c => c.put(request, copy)).catch(() => {});
+      }
+      return res;
+    })
+    .catch(() => caches.open(cacheName).then(c => c.match(request).then(r => r || caches.match('./index.html'))));
 }
+
+self.addEventListener('fetch', event => {
+  const req = event.request;
+  if (req.method !== 'GET') return;
+
+  const url = new URL(req.url);
+
+  // Navigations: network-first
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      fetch(req)
+        .then(res => {
+          if (res && res.ok) {
+            const copy = res.clone();
+            caches.open(APP_CACHE).then(c => c.put('./index.html', copy)).catch(() => {});
+          }
+          return res;
+        })
+        .catch(() => caches.match('./index.html'))
+    );
+    return;
+  }
+
+  // Same-origin app assets (JS/CSS/HTML/icons): network-first so updates are never stuck
+  if (url.origin === self.location.origin) {
+    event.respondWith(networkFirst(req, APP_CACHE));
+    return;
+  }
+
+  // CDN: network-first with cache fallback
+  if (CDN_HOSTS.includes(url.hostname)) {
+    event.respondWith(networkFirst(req, CDN_CACHE));
+  }
+});
