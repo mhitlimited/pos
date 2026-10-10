@@ -6,15 +6,15 @@
 
   // ================= রাউটার =================
   const NAV = [
-    { id: 'pos', label: 'Sales Counter', icon: 'fa-cash-register' },
-    { id: 'customers', label: 'Customers & Due', icon: 'fa-users' },
-    { id: 'products', label: 'Products & Stock', icon: 'fa-boxes-stacked' },
-    { id: 'purchases', label: 'Purchases & Suppliers', icon: 'fa-truck-ramp-box' },
-    { id: 'expenses', label: 'Expenses', icon: 'fa-wallet' },
-    { id: 'history', label: 'Sales History', icon: 'fa-receipt' },
-    { id: 'reports', label: 'Reports', icon: 'fa-chart-line' },
-    { id: 'dashboard', label: 'Dashboard', icon: 'fa-chart-pie' },
-    { id: 'settings', label: 'Settings', icon: 'fa-gear' }
+    { id: 'pos', label: 'Sales Counter', icon: 'fa-store' },
+    { id: 'customers', label: 'Customers & Due', icon: 'fa-user-group' },
+    { id: 'products', label: 'Products & Stock', icon: 'fa-box-open' },
+    { id: 'purchases', label: 'Purchases & Suppliers', icon: 'fa-truck' },
+    { id: 'expenses', label: 'Expenses', icon: 'fa-money-bill-wave' },
+    { id: 'history', label: 'Sales History', icon: 'fa-file-invoice' },
+    { id: 'reports', label: 'Reports', icon: 'fa-chart-column' },
+    { id: 'dashboard', label: 'Dashboard', icon: 'fa-gauge-high' },
+    { id: 'settings', label: 'Settings', icon: 'fa-sliders' }
   ];
   const Views = {};
   const App = window.App = {
@@ -119,9 +119,10 @@
         <div class="card search-wrap">
           <div class="flex gap2 mb2">
             <div class="relative grow"><i class="fas fa-magnifying-glass search-ico"></i>
-              <input id="pos-search" class="input has-ico" placeholder="Product name or barcode..." value="${esc(this.q)}" oninput="POS.search(this.value)" onkeydown="if(event.key==='Enter')POS.enter()" autocomplete="off"></div>
+              <input id="pos-search" class="input has-ico" placeholder="Search or scan barcode..." value="${esc(this.q)}" oninput="POS.search(this.value)" onkeydown="if(event.key==='Enter')POS.enter()" autocomplete="off"></div>
             <button class="btn btn-soft" onclick="POS.scan()" title="Camera scan"><i class="fas fa-barcode"></i></button>
             <button class="btn btn-soft" onclick="POS.showHold()" title="Held Bills"><i class="fas fa-pause"></i><span id="hold-count"></span></button>
+            <span class="scan-ready only-desk" title="USB/Bluetooth barcode scanner ready"><i class="fas fa-plug"></i> Scanner</span>
           </div>
           <div class="chips" id="pos-cats"></div>
         </div>
@@ -488,4 +489,78 @@
     if (window.Lock) Lock.init(start); else start();
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && window.Lock) Lock.onResume(); else if (window.Lock) Lock.onHide(); });
   });
+
+  // ================= Hardware barcode scanner (USB/Bluetooth keyboard wedge) =================
+  // Desktop POS: scanners type digits fast and send Enter — auto-add product to cart
+  (function setupWedgeScanner() {
+    let buf = '', last = 0, timer = null;
+    const GAP = 80;      // max ms between chars from a scanner
+    const MIN_LEN = 4;   // ignore short accidental keys
+    const RESET = 120;   // flush incomplete buffer
+
+    function isTypingTarget(el) {
+      if (!el) return false;
+      const t = (el.tagName || '').toLowerCase();
+      if (t === 'textarea' || t === 'select') return true;
+      if (t === 'input') {
+        const ty = (el.type || '').toLowerCase();
+        // allow POS search box to still work with Enter via POS.enter — but wedge on other fields should not steal
+        if (el.id === 'pos-search') return false; // we handle barcode path ourselves
+        return ty !== 'button' && ty !== 'checkbox' && ty !== 'radio' && ty !== 'submit';
+      }
+      if (el.isContentEditable) return true;
+      return false;
+    }
+
+    function flush() {
+      const code = buf.trim(); buf = '';
+      if (timer) { clearTimeout(timer); timer = null; }
+      if (code.length < MIN_LEN) return;
+      if (App.view !== 'pos') return;
+      if (window.Scanner && Scanner.isOpen && Scanner.isOpen()) return;
+      if (document.querySelector('.modal-back, .ui-confirm-backdrop, .scan')) return;
+      const p = POS.findByBarcode(code);
+      if (p) {
+        POS.add(p.id, true, { picked: true });
+        POS.q = '';
+        const s = document.getElementById('pos-search');
+        if (s) { s.value = ''; }
+        // Blur active field so next scan is captured cleanly; cart updates for checkout
+        try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch (_) {}
+        try { Sound && Sound.play && Sound.play('ok'); } catch (_) {}
+      } else {
+        toast('⚠️ Barcode not found: ' + code);
+        try { Sound && Sound.play && Sound.play('err'); } catch (_) {}
+      }
+    }
+
+    document.addEventListener('keydown', e => {
+      if (App.view !== 'pos') return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      // Don't interfere when user is typing in forms (except pos-search)
+      if (isTypingTarget(document.activeElement) && document.activeElement && document.activeElement.id !== 'pos-search') return;
+      if (document.querySelector('.modal-back, .ui-confirm-backdrop, .scan')) return;
+
+      const now = Date.now();
+      if (now - last > GAP) buf = '';
+      last = now;
+
+      if (e.key === 'Enter') {
+        if (buf.length >= MIN_LEN) {
+          e.preventDefault();
+          e.stopPropagation();
+          flush();
+        }
+        // short buffer: let normal Enter (POS.enter on search) work
+        return;
+      }
+      if (e.key.length === 1) {
+        // scanner chars — collect; if focus is pos-search, still collect for wedge path on Enter
+        buf += e.key;
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(() => { buf = ''; }, RESET * 3);
+      }
+    }, true);
+  })();
+
 })();
