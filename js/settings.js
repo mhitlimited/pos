@@ -199,12 +199,13 @@
         <div class="field"><label class="label">প্রিন্ট মোড</label><select class="input" onchange="DB_.btMode(this.value)"><option value="image" ${s.btMode !== 'text' ? 'selected' : ''}>ছবি মোড — বাংলা সহ (প্রস্তাবিত)</option><option value="text" ${s.btMode === 'text' ? 'selected' : ''}>টেক্সট মোড — শুধু ইংরেজি, দ্রুত</option></select></div>
         <div class="flex gap2"><button class="btn btn-primary grow" id="bt-conn" onclick="Printer.connect()"><i class="fab fa-bluetooth-b"></i> প্রিন্টার সংযুক্ত করুন</button><button class="btn btn-danger-soft grow hidden" id="bt-disc" onclick="Printer.disconnect()">বিচ্ছিন্ন করুন</button></div>
         <p class="xs muted mt2">Android Chrome/Edge-এ কাজ করে। প্রিন্টারটি আগে ফোনের ব্লুটুথে পেয়ার করা থাকলে ভালো।</p></div>
+      <div class="card pad mb3"><div class="sec-title"><i class="fab fa-google ptext"></i> Google Drive ক্লাউড ব্যাকআপ</div><div class="js-cloud-body"></div></div>
       <div class="card pad mb3"><div class="sec-title"><i class="fas fa-database ptext"></i> ডেটা ব্যবস্থাপনা</div>
         <div class="kv"><span class="muted">শেষ ব্যাকআপ</span><b>${last ? C.fmtDT(new Date(last).toISOString()) : 'কখনো নেওয়া হয়নি'}</b></div><div class="kv"><span class="muted">ব্যবহৃত স্টোরেজ</span><b class="${kb > 4000 ? 'bad' : ''}">${kb} KB / প্রায় ৫০০০ KB</b></div>
         <div class="grid2 mt3"><button class="btn btn-primary" onclick="exportData()"><i class="fas fa-cloud-arrow-down"></i> ব্যাকআপ</button><label class="btn btn-ghost" style="cursor:pointer"><i class="fas fa-file-import"></i> রিস্টোর<input type="file" accept="application/json,.json" class="hidden" onchange="importData(this)"></label></div>
         <button class="btn btn-danger-soft btn-block mt2" onclick="wipeAllData()"><i class="fas fa-trash"></i> সব ডেটা মুছুন</button></div>
-      <div class="tc muted xs">ProPOS v6 · ফ্রি অফলাইন POS · ডেটা আপনার ডিভাইসেই থাকে</div>`;
-      Theme.apply(); Printer.ui();
+      <div class="tc muted xs">ProPOS v7 · ফ্রি অফলাইন POS · ডেটা আপনার ডিভাইসেই থাকে</div>`;
+      Theme.apply(); Printer.ui(); if (window.Cloud) Cloud.renderUI();
     },
     save() {
       const s = DB.settings; s.shopName = $('st-name').value.trim() || 'আমার দোকান'; s.shopAddress = $('st-addr').value.trim(); s.shopPhone = $('st-phone').value.trim();

@@ -33,7 +33,7 @@
   function safeSave(key, value) {
     try {
       root.localStorage.setItem(key, JSON.stringify(value));
-      if (key !== K.cart) root.localStorage.setItem('propos_dirty', '1');
+      if (key !== K.cart) { root.localStorage.setItem('propos_dirty', '1'); if (root.Cloud) root.Cloud.markDirty(); }
       return true;
     } catch (e) {
       console.error('সেভ ব্যর্থ:', key, e);

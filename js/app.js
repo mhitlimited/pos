@@ -42,7 +42,7 @@
   function pushGuard() { try { history.pushState({ g: 1 }, ''); } catch (_) {} }
   function handleBack() {
     if (window.hasConfirm && hasConfirm()) { closeConfirm(); return true; }
-    if (document.querySelector('.lock')) return true;
+    if (document.querySelector('.lock,.welcome')) return true;
     if (window.Scanner && Scanner.isOpen()) { Scanner.close(); return true; }
     if (Modal.stack.length) { Modal.close(); return true; }
     if (App.drawerOpen()) { App.closeDrawers(); return true; }
@@ -56,6 +56,51 @@
     exitArmed = true; toast('বের হতে আবার Back চাপুন (আগে ব্যাকআপ নিয়ে নিন)');
     setTimeout(() => { if (exitArmed) { exitArmed = false; pushGuard(); } }, 2500);
   });
+
+  // ================= অ্যানিমেশন: পণ্য কার্টে উড়ে যায় =================
+  const Fx = window.Fx = {
+    reduced() { return window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches; },
+    cartTarget() {
+      const d = $('cart-desk');
+      if (d && d.getClientRects().length) return d.querySelector('.cart-ico');
+      const b = $('cart-bar');
+      if (b && b.getClientRects().length) return b.querySelector('.cb-ico');
+      return document.querySelector('.topbar .pos-only');
+    },
+    added(id, quiet) {
+      const card = document.querySelector('#pgrid .pcard[data-id="' + id + '"]');
+      if (card) {
+        card.classList.remove('added'); void card.offsetWidth; card.classList.add('added');
+        const q = card.querySelector('.pqty'); if (q) { q.classList.remove('pop'); void q.offsetWidth; q.classList.add('pop'); }
+      }
+      const src = !quiet && card ? card.querySelector('.pimg') : null;
+      const tgt = this.cartTarget();
+      if (!src || !tgt || this.reduced()) { this.landed(); return; }
+      const s = src.getBoundingClientRect(), t = tgt.getBoundingClientRect();
+      if (!s.width || !t.width) { this.landed(); return; }
+      const size = Math.min(s.width, s.height, 76);
+      const sx = s.left + s.width / 2, sy = s.top + s.height / 2, tx = t.left + t.width / 2, ty = t.top + t.height / 2;
+      const g = src.cloneNode(true); g.className = 'fly-ghost';
+      g.style.cssText = 'left:' + (sx - size / 2) + 'px;top:' + (sy - size / 2) + 'px;width:' + size + 'px;height:' + size + 'px';
+      document.body.appendChild(g);
+      const dx = tx - sx, dy = ty - sy, lift = Math.min(130, Math.max(60, Math.abs(dy) * 0.3));
+      const a = g.animate([
+        { transform: 'translate(0,0) scale(1) rotate(0deg)', opacity: 1, offset: 0 },
+        { transform: 'translate(' + dx * 0.4 + 'px,' + (dy * 0.4 - lift) + 'px) scale(.82) rotate(-10deg)', opacity: 1, offset: 0.45 },
+        { transform: 'translate(' + dx + 'px,' + dy + 'px) scale(.2) rotate(14deg)', opacity: 0.55, offset: 1 }
+      ], { duration: 720, easing: 'cubic-bezier(.45,.05,.4,1)', fill: 'forwards' });
+      const done = () => { g.remove(); this.landed(); };
+      a.onfinish = done; a.oncancel = () => g.remove();
+    },
+    landed() {
+      const tgt = this.cartTarget();
+      document.querySelectorAll('#cart-badge,.cb-count,.cart-bar .cb-ico,#cart-desk .cart-ico').forEach(e => { e.classList.remove('bump'); void e.offsetWidth; e.classList.add('bump'); });
+      if (tgt && !this.reduced()) {
+        const r = tgt.getBoundingClientRect();
+        if (r.width) { const ring = document.createElement('div'); ring.className = 'fly-ring'; ring.style.left = (r.left + r.width / 2) + 'px'; ring.style.top = (r.top + r.height / 2) + 'px'; document.body.appendChild(ring); setTimeout(() => ring.remove(), 700); }
+      }
+    }
+  };
 
   // ================= বিক্রয় কাউন্টার =================
   const POS = window.POS = {
@@ -105,7 +150,8 @@
       else g.innerHTML = shown.map(p => {
         const low = p.track !== false && p.stock <= (p.minStock || 0);
         const exp = p.expiry && p.expiry < C.todayKey();
-        return `<div class="pcard" onclick="POS.add('${p.id}')">
+        return `<div class="pcard" data-id="${p.id}" onclick="POS.add('${p.id}')">
+          <span class="pqty"></span><span class="added-fx"></span>
           <div class="pimg">${p.image ? `<img src="${p.image}" alt="">` : '<i class="fas fa-box"></i>'}</div>
           ${exp ? '<span class="ptag">মেয়াদ শেষ</span>' : (p.track !== false && p.stock <= 0 ? '<span class="ptag">স্টক নেই</span>' : (low ? '<span class="ptag" style="background:#d97706">কম স্টক</span>' : ''))}
           <div class="pname">${esc(p.name)}</div>
@@ -113,6 +159,11 @@
       }).join('');
       const more = $('pos-more'); if (more) more.classList.toggle('hidden', list.length <= this.limit);
       const hc = $('hold-count'); if (hc) hc.textContent = DB.hold.length ? ' ' + DB.hold.length : '';
+      this.markCards();
+    },
+    markCards() {
+      const m = {}; DB.cart.forEach(c => { m[c.id] = c.qty; });
+      document.querySelectorAll('#pgrid .pcard').forEach(el => { const q = m[el.dataset.id]; el.classList.toggle('sel', !!q); const b = el.querySelector('.pqty'); if (b) b.textContent = q ? '×' + q : ''; });
     },
     search(v) { this.q = v; this.limit = 120; this.renderGrid(); },
     setCat(c) { this.cat = c; this.limit = 120; this.renderCats(); this.renderGrid(); },
@@ -141,7 +192,7 @@
           if (ex && ex.qty >= p.stock) { toast('⚠️ স্টক অপর্যাপ্ত!'); return; }
         }
         if (ex) ex.qty++; else DB.cart.push({ id: p.id, name: p.name, price: p.price, cost: p.cost || 0, qty: 1, unit: p.unit });
-        C.save('cart'); this.renderCart(); if (quiet) Sound.play('beep');
+        C.save('cart'); this.lastAdded = { id: p.id, isNew: !ex }; this.renderCart(); Fx.added(p.id, quiet); if (quiet) Sound.play('beep');
       };
       if (p.expiry && p.expiry < C.todayKey()) askConfirm(`"${p.name}" এর মেয়াদ শেষ হয়ে গেছে। তবুও বিক্রি করবেন?`, go, { title: 'মেয়াদোত্তীর্ণ পণ্য', danger: true, yes: 'হ্যাঁ, যোগ করুন' });
       else go();
@@ -174,13 +225,14 @@
     resetBill() { this.disc = 0; this.discType = 'percent'; this.customerId = null; this.note = ''; this.taxInit(); },
     cartHTML() {
       const t = this.totals(); const cust = this.customerId ? findCustomer(this.customerId) : null;
-      const items = DB.cart.length ? DB.cart.map(c => `<div class="cart-item">
+      const la = this.lastAdded;
+      const items = DB.cart.length ? DB.cart.map(c => `<div class="cart-item${la && la.id === c.id ? (la.isNew ? ' new' : ' bumped') : ''}" data-id="${c.id}">
           <div class="grow" onclick="POS.editItem('${c.id}')"><div class="fw6 sm trunc">${esc(c.name)}</div><div class="xs muted">${money(c.price)} × ${c.qty} <i class="fas fa-pen" style="font-size:9px;opacity:.5"></i></div></div>
           <div class="qty"><button onclick="POS.qty('${c.id}',-1)">−</button><span>${c.qty}</span><button onclick="POS.qty('${c.id}',1)">+</button></div>
           <div class="fw7 ptext sm" style="min-width:56px;text-align:right">${money(c.price * c.qty)}</div>
           <button class="icon-btn" style="width:28px;height:28px" onclick="POS.remove('${c.id}')"><i class="fas fa-xmark"></i></button></div>`).join('')
         : '<div class="empty"><i class="fas fa-bag-shopping"></i>কার্ট খালি</div>';
-      return `<div class="flex between items-c mb3"><div class="sec-title" style="margin:0"><i class="fas fa-bag-shopping ptext"></i> কার্ট <span class="badge b-p">${DB.cart.reduce((s, c) => s + c.qty, 0)}</span></div>
+      return `<div class="flex between items-c mb3"><div class="sec-title" style="margin:0"><i class="fas fa-bag-shopping ptext cart-ico"></i> কার্ট <span class="badge b-p">${DB.cart.reduce((s, c) => s + c.qty, 0)}</span></div>
           <div class="flex gap1"><button class="btn btn-sm btn-ghost" onclick="POS.hold()"><i class="fas fa-pause"></i> হোল্ড</button><button class="btn btn-sm btn-danger-soft" onclick="POS.clear()"><i class="fas fa-trash"></i></button></div></div>
         <div style="max-height:38vh;overflow-y:auto;margin-bottom:10px">${items}</div>
         <button class="btn btn-ghost btn-block mb3" onclick="POS.pickCust()"><i class="fas fa-user"></i> ${cust ? esc(cust.name) + (C.customerBalance(cust.id) > 0 ? ' · বাকি ' + money(C.customerBalance(cust.id)) : '') : 'ক্রেতা: ওয়াক-ইন (বাকির জন্য বাছাই করুন)'}</button>
@@ -194,10 +246,19 @@
     },
     renderCart() {
       const h = this.cartHTML(); ['cart-desk', 'cart-mobile'].forEach(id => { const e = $(id); if (e) e.innerHTML = h; });
+      this.lastAdded = null;
       const n = DB.cart.reduce((s, c) => s + c.qty, 0); const b = $('cart-badge');
       if (b) { b.textContent = n; b.classList.toggle('hidden', !n); }
+      const bar = $('cart-bar');
+      if (bar) {
+        const t = this.totals(); bar.classList.toggle('empty', !n);
+        bar.innerHTML = n
+          ? `<span class="cb-ico"><i class="fas fa-bag-shopping"></i><b class="cb-count">${n}</b></span><span class="cb-mid"><b>${n}টি আইটেম</b><small>কার্ট দেখতে ট্যাপ করুন</small></span><span class="cb-total">${money(t.total)}</span><i class="fas fa-chevron-up cb-arrow"></i>`
+          : `<span class="cb-ico"><i class="fas fa-bag-shopping"></i></span><span class="cb-mid"><b>কার্ট খালি</b><small>পণ্যে ট্যাপ করে যোগ করুন</small></span>`;
+      }
+      this.markCards();
     },
-    updTotals() { const t = this.totals(); const set = (c, v) => document.querySelectorAll(c).forEach(e => e.textContent = v); set('.js-sub', money(t.subtotal)); set('.js-disc', '-' + money(t.discount)); set('.js-tax', money(t.tax)); set('.js-total', money(t.total)); },
+    updTotals() { const t = this.totals(); const set = (c, v) => document.querySelectorAll(c).forEach(e => e.textContent = v); set('.js-sub', money(t.subtotal)); set('.js-disc', '-' + money(t.discount)); set('.js-tax', money(t.tax)); set('.js-total', money(t.total)); set('.cb-total', money(t.total)); },
     setDisc(v) { this.disc = num(v); this.updTotals(); },
     setDiscType(v) { this.discType = v; this.updTotals(); },
     setTax(v) { this.tax = num(v); this.updTotals(); },
@@ -412,7 +473,7 @@
   // ================= চালু =================
   document.addEventListener('DOMContentLoaded', () => {
     C.load(); POS.taxInit(); buildNav();
-    const start = () => { App.go('pos'); checkPendingBackup(); POS.renderCart(); };
+    const start = () => { App.go('pos'); checkPendingBackup(); POS.renderCart(); if (window.Cloud) Cloud.init(); };
     if (window.Lock) Lock.init(start); else start();
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && window.Lock) Lock.onResume(); else if (window.Lock) Lock.onHide(); });
   });
