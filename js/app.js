@@ -65,7 +65,7 @@
       if (d && d.getClientRects().length) return d.querySelector('.cart-ico');
       const b = $('cart-bar');
       if (b && b.getClientRects().length) return b.querySelector('.cb-ico');
-      return document.querySelector('.topbar .pos-only');
+      return document.querySelector('#cart-bar');
     },
     added(id, quiet) {
       const card = document.querySelector('#pgrid .pcard[data-id="' + id + '"]');

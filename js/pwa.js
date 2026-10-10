@@ -1,4 +1,4 @@
-/* PWA: Service Worker রেজিস্টার + ইনস্টল বাটন + Update Noteিফিকেশন */
+/* PWA: Service Worker, install prompt, update bar, offline badge, persistent storage */
 (function () {
   'use strict';
 
@@ -7,8 +7,9 @@
     window.addEventListener('load', async () => {
       try {
         const hadController = !!navigator.serviceWorker.controller;
-        const reg = await navigator.serviceWorker.register('./sw.js');
-        if (reg.waiting && hadController) showUpdateBar(reg.waiting);   // আগের ভিজিটে Nameা Update অপেক্ষায় থাকলে আবার দেখান
+        const reg = await navigator.serviceWorker.register('./sw.js', { scope: './' });
+
+        if (reg.waiting && hadController) showUpdateBar(reg.waiting);
 
         reg.addEventListener('updatefound', () => {
           const nw = reg.installing;
@@ -20,33 +21,34 @@
           });
         });
 
+        // Reload once when new SW takes control
         let refreshing = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
-          if (refreshing || !hadController) return;   // প্রথম ইনস্টলে অকারণ রিলোড নয়
+          if (refreshing || !hadController) return;
           refreshing = true;
           location.reload();
         });
+
+        // Periodic update check (every 30 min while tab open)
+        setInterval(() => { try { reg.update(); } catch (_) {} }, 30 * 60 * 1000);
       } catch (err) {
         console.warn('Service Worker registration failed:', err);
       }
     });
   }
 
-  // ---------- Install Button ----------
+  // ---------- Install button ----------
   let deferredPrompt = null;
-  const isStandalone =
-    window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
 
-  function makeBtn() {
-    if (document.getElementById('pwa-install-btn') || isStandalone) return null;
-    const b = document.createElement('button');
+  function makeInstallBtn() {
+    let b = document.getElementById('pwa-install-btn');
+    if (b) return b;
+    b = document.createElement('button');
     b.id = 'pwa-install-btn';
     b.type = 'button';
+    b.className = 'pwa-install-btn';
     b.innerHTML = '<i class="fa-solid fa-download"></i> Install app';
-    b.style.cssText =
-      'position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom));' +
-      'z-index:9999;background:#4f46e5;color:#fff;border:0;border-radius:999px;padding:12px 22px;' +
-      'font-size:14px;font-weight:600;box-shadow:0 8px 24px rgba(79,70,229,.4);cursor:pointer;display:none';
+    b.style.display = 'none';
     document.body.appendChild(b);
     return b;
   }
@@ -54,13 +56,14 @@
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
-    const btn = makeBtn();
+    const btn = makeInstallBtn();
     if (!btn) return;
-    btn.style.display = 'block';
+    btn.style.display = 'flex';
     btn.onclick = async () => {
       btn.style.display = 'none';
+      if (!deferredPrompt) return;
       deferredPrompt.prompt();
-      await deferredPrompt.userChoice;
+      try { await deferredPrompt.userChoice; } catch (_) {}
       deferredPrompt = null;
     };
   });
@@ -71,23 +74,24 @@
     deferredPrompt = null;
   });
 
-  // ---------- Update Bar ----------
+  // ---------- Update bar ----------
   function showUpdateBar(worker) {
     if (document.getElementById('pwa-update-bar')) return;
     const bar = document.createElement('div');
     bar.id = 'pwa-update-bar';
-    bar.style.cssText =
-      'position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:10000;' +
-      'background:#0f172a;color:#fff;border-radius:14px;padding:12px 16px;display:flex;gap:12px;' +
-      'align-items:center;justify-content:space-between;font-size:14px;box-shadow:0 8px 24px rgba(0,0,0,.35)';
+    bar.className = 'pwa-update-bar';
     bar.innerHTML =
-      '<span>New version available</span>' +
-      '<button style="background:#6366f1;color:#fff;border:0;border-radius:10px;padding:8px 14px;font-weight:600;cursor:pointer">Update</button>';
-    bar.querySelector('button').onclick = () => worker.postMessage('SKIP_WAITING');
+      '<div class="msg">New version available<small>Update for the latest features and fixes</small></div>' +
+      '<button type="button">Update</button>';
+    bar.querySelector('button').onclick = () => {
+      try { worker.postMessage('SKIP_WAITING'); } catch (_) {}
+      // Fallback reload if controllerchange does not fire
+      setTimeout(() => location.reload(), 800);
+    };
     document.body.appendChild(bar);
   }
 
-  // ---------- Persistent storage (ব্রাউজার যেন ডেটা নিজে from না মুছে) ----------
+  // ---------- Persistent storage ----------
   if (navigator.storage && navigator.storage.persist) {
     navigator.storage.persist().catch(() => {});
   }
@@ -95,18 +99,25 @@
   // ---------- Online / Offline badge ----------
   function updateNet() {
     let b = document.getElementById('net-badge');
-    if (navigator.onLine) { if (b) b.remove(); return; }
+    if (navigator.onLine) {
+      if (b) b.remove();
+      return;
+    }
     if (!b) {
       b = document.createElement('div');
       b.id = 'net-badge';
       b.textContent = '● Offline mode';
-      b.style.cssText = 'position:fixed;top:calc(8px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);' +
-        'z-index:10001;background:#f59e0b;color:#fff;font-size:12px;font-weight:600;padding:4px 12px;border-radius:999px;' +
-        'box-shadow:0 4px 12px rgba(0,0,0,.2);pointer-events:none';
       document.body.appendChild(b);
     }
   }
   window.addEventListener('online', updateNet);
   window.addEventListener('offline', updateNet);
   document.addEventListener('DOMContentLoaded', updateNet);
+
+  // ---------- Display mode / standalone polish ----------
+  try {
+    if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
+      document.documentElement.classList.add('pwa-standalone');
+    }
+  } catch (_) {}
 })();
