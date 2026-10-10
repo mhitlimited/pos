@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ProPOS - ফ্রি পয়েন্ট অফ সেল</title>
-    <noscript><style>body::before{content:"ProPOS চালাতে JavaScript চালু করুন";display:block;padding:20px;text-align:center}</style></noscript>
-    <meta name="description" content="ProPOS - অফলাইনে চলা ফ্রি বাংলা পয়েন্ট অফ সেল সফটওয়্যার">
+    <title>ProPOS - Free Point of Sale</title>
+    <noscript><style>body::before{content:"Enable JavaScript to run ProPOS";display:block;padding:20px;text-align:center}</style></noscript>
+    <meta name="description" content="ProPOS - Free offline point of sale software">
     <script>(function(){try{var m=localStorage.getItem('propos_theme')||'auto';if(m==='dark'||(m==='auto'&&window.matchMedia('(prefers-color-scheme: dark)').matches))document.documentElement.classList.add('dark')}catch(e){}})()</script>
 
     <link rel="manifest" href="manifest.webmanifest">
@@ -26,27 +26,26 @@
 </head>
 <body data-view="pos">
 
-<!-- ডেস্কটপ সাইডবার -->
+<!-- Desktop sidebar -->
 <aside class="sidebar" id="sidebar">
-    <div class="brand"><div class="logo"><i class="fas fa-cash-register"></i></div><div><div class="fw7" style="font-size:17px">ProPOS</div><div class="xs muted">ফ্রি পয়েন্ট অফ সেল</div></div></div>
+    <div class="brand"><div class="logo"><i class="fas fa-cash-register"></i></div><div><div class="fw7" style="font-size:17px">ProPOS</div><div class="xs muted">Free Point of Sale</div></div></div>
     <nav class="nav" id="nav-desk"></nav>
     <div style="padding:10px;border-top:1px solid var(--border)" class="flex col gap2">
         <div class="js-acct"></div>
-        <button class="btn btn-primary btn-block" onclick="exportData()"><i class="fas fa-cloud-arrow-down"></i> ব্যাকআপ নিন</button>
-        <div class="grid2"><button class="btn btn-ghost" onclick="Theme.toggle()"><i class="theme-ico fas fa-moon"></i> থিম</button><button class="btn btn-ghost" onclick="Lock.lockNow()"><i class="fas fa-lock"></i> লক</button></div>
-        <div class="legal-links"><a href="privacy.html" target="_blank" rel="noopener">প্রাইভেসি পলিসি</a> · <a href="terms.html" target="_blank" rel="noopener">শর্তাবলী</a></div>
+        <button class="btn btn-primary btn-block" onclick="Cloud.panel()"><i class="fas fa-cloud"></i> Cloud Backup</button>
+        <div class="grid2"><button class="btn btn-ghost" onclick="Theme.toggle()"><i class="theme-ico fas fa-moon"></i> Theme</button><button class="btn btn-ghost" onclick="Lock.lockNow()"><i class="fas fa-lock"></i> Lock</button></div>
+        <div class="legal-links"><a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a> · <a href="terms.html" target="_blank" rel="noopener">Terms of Service</a></div>
     </div>
 </aside>
 
-<!-- মোবাইল টপবার -->
+<!-- Mobile topbar -->
 <header class="topbar">
     <div class="flex items-c gap2"><div class="logo" style="width:34px;height:34px;font-size:14px"><i class="fas fa-cash-register"></i></div><b style="font-size:17px">ProPOS</b></div>
     <div class="flex items-c">
-        <button type="button" class="sync-chip js-chip" onclick="Cloud.panel()" title="Google Drive ব্যাকআপ"></button>
-        <button class="icon-btn" onclick="exportData()" title="ব্যাকআপ"><i class="fas fa-cloud-arrow-down"></i></button>
-        <button class="icon-btn" onclick="Theme.toggle()" title="ডার্ক/লাইট"><i class="theme-ico fas fa-moon"></i></button>
-        <button class="icon-btn pos-only" onclick="App.toggleCart()" title="কার্ট"><i class="fas fa-bag-shopping"></i><span class="cart-badge hidden" id="cart-badge">0</span></button>
-        <button class="icon-btn" onclick="App.toggleNav()" title="মেনু"><i class="fas fa-bars"></i></button>
+        <button type="button" class="sync-chip js-chip" onclick="Cloud.panel()" title="Google Drive Backup"></button>
+        <button class="icon-btn" onclick="Theme.toggle()" title="Dark/Light"><i class="theme-ico fas fa-moon"></i></button>
+        <button class="icon-btn pos-only" onclick="App.toggleCart()" title="Cart"><i class="fas fa-bag-shopping"></i><span class="cart-badge hidden" id="cart-badge">0</span></button>
+        <button class="icon-btn" onclick="App.toggleNav()" title="Menu"><i class="fas fa-bars"></i></button>
     </div>
 </header>
 
@@ -54,25 +53,25 @@
 
 <div id="scrim" class="scrim hidden" onclick="App.closeDrawers()"></div>
 
-<!-- মোবাইল মেনু -->
+<!-- Mobile Menu -->
 <aside id="mobile-nav" class="drawer left">
-    <div class="brand"><div class="logo"><i class="fas fa-cash-register"></i></div><div class="grow"><div class="fw7" style="font-size:17px">ProPOS</div><div class="xs muted">ফ্রি পয়েন্ট অফ সেল</div></div><button class="icon-btn" onclick="App.closeDrawers()"><i class="fas fa-xmark"></i></button></div>
+    <div class="brand"><div class="logo"><i class="fas fa-cash-register"></i></div><div class="grow"><div class="fw7" style="font-size:17px">ProPOS</div><div class="xs muted">Free Point of Sale</div></div><button class="icon-btn" onclick="App.closeDrawers()"><i class="fas fa-xmark"></i></button></div>
     <nav class="nav" id="nav-mob"></nav>
     <div style="padding:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom));border-top:1px solid var(--border)" class="flex col gap2">
         <div class="js-acct" onclick="App.closeDrawers()"></div>
-        <button class="btn btn-primary btn-block" onclick="App.closeDrawers();exportData()"><i class="fas fa-cloud-arrow-down"></i> ব্যাকআপ নিন</button>
-        <div class="grid2"><button class="btn btn-ghost" onclick="Theme.toggle()"><i class="theme-ico fas fa-moon"></i> থিম</button><button class="btn btn-ghost" onclick="App.closeDrawers();Lock.lockNow()"><i class="fas fa-lock"></i> লক</button></div>
-        <div class="legal-links"><a href="privacy.html" target="_blank" rel="noopener">প্রাইভেসি পলিসি</a> · <a href="terms.html" target="_blank" rel="noopener">শর্তাবলী</a></div>
+        <button class="btn btn-primary btn-block" onclick="App.closeDrawers();Cloud.panel()"><i class="fas fa-cloud"></i> Cloud Backup</button>
+        <div class="grid2"><button class="btn btn-ghost" onclick="Theme.toggle()"><i class="theme-ico fas fa-moon"></i> Theme</button><button class="btn btn-ghost" onclick="App.closeDrawers();Lock.lockNow()"><i class="fas fa-lock"></i> Lock</button></div>
+        <div class="legal-links"><a href="privacy.html" target="_blank" rel="noopener">Privacy Policy</a> · <a href="terms.html" target="_blank" rel="noopener">Terms of Service</a></div>
     </div>
 </aside>
 
-<!-- মোবাইল কার্ট -->
+<!-- Mobile Cart -->
 <aside id="mobile-cart" class="drawer right">
-    <div class="flex between items-c" style="padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top));border-bottom:1px solid var(--border)"><b style="font-size:17px">বিক্রয় কার্ট</b><button class="icon-btn" onclick="App.closeDrawers()"><i class="fas fa-xmark"></i></button></div>
+    <div class="flex between items-c" style="padding:12px 16px;padding-top:calc(12px + env(safe-area-inset-top));border-bottom:1px solid var(--border)"><b style="font-size:17px">Sales Cart</b><button class="icon-btn" onclick="App.closeDrawers()"><i class="fas fa-xmark"></i></button></div>
     <div id="cart-mobile" style="padding:14px;overflow-y:auto;flex:1;padding-bottom:calc(14px + env(safe-area-inset-bottom))"></div>
 </aside>
 
-<button type="button" id="cart-bar" class="cart-bar empty" onclick="App.toggleCart()" aria-label="কার্ট"></button>
+<button type="button" id="cart-bar" class="cart-bar empty" onclick="App.toggleCart()" aria-label="Cart"></button>
 
 <div id="toast" class="hidden"></div>
 

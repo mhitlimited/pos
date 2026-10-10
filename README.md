@@ -1,39 +1,31 @@
-# ProPOS v8 — ফ্রি অফলাইন পয়েন্ট অফ সেল (PWA)
-সার্ভার ছাড়া চলে, মোবাইলে ইনস্টল করা যায়। ডেটা ডিভাইসে থাকে এবং চাইলে আপনার Google Drive-এ অটো-ব্যাকআপ হয়।
+# ProPOS v8 — Free Offline Point of Sale (PWA)
 
-**ফিচার:** বিক্রয়, বাকি/ডিউ, ক্রেতা খতিয়ান, সরবরাহকারী ও ক্রয়, খরচ, ফেরত, হোল্ড বিল, রিপোর্ট ও লাভ, ডার্ক মোড, PIN লক, বারকোড স্ক্যান, ব্লুটুথ প্রিন্ট, ব্যাকআপ/রিস্টোর, CSV।
+Runs without a server, installable on mobile. Data stays on the device and can auto-backup to your Google Drive.
 
-## v8-এ নতুন
-- **স্ক্যান শেষে ক্যামেরা অটো-বন্ধ:** বিক্রয় কাউন্টারে বারকোড স্ক্যানে পণ্য মিললেই কার্টে সিলেক্ট হয়, ক্যামেরা বন্ধ হয় এবং "✓ প্রোডাক্ট সিলেক্ট হয়েছে" লেখা আসে। বারকোড না মিললে ক্যামেরা খোলা থাকে ও ক্যামেরা স্ক্রিনেই লাল বার্তা দেখায়। অ্যাপ ব্যাকগ্রাউন্ডে গেলে ক্যামেরা ছেড়ে দেয়।
-- **প্রাইভেসি পলিসি ও শর্তাবলী:** `privacy.html` ও `terms.html` (বাংলা + English)। অ্যাপের সেটিংস, সাইডবার, ওয়েলকাম ও সাইন-ইন অংশে লিংক আছে।
-- **বাগ ফিক্স:** PIN বাইপাস, ভুল PIN-এ ৩০ সেকেন্ড লক, আপডেটে বিক্রয়ের মাঝে হঠাৎ রিলোড, অফলাইনে ভুল পেজ ক্যাশ, খরচ পেজে মাঝরাতের পর তারিখ পুরনো থাকা, নেতিবাচক মান, রিমাইন্ডারে স্ক্রিপ্ট ইনজেকশন ঝুঁকি, CSV হেডার শনাক্ত, UPC-A/EAN-13 বারকোড মিলানো ইত্যাদি।
+**Features:** Sales, due/credit, customer ledger, suppliers & purchases, expenses, returns, hold bills, reports & profit, dark mode, PIN lock, barcode scan, Bluetooth print, CSV export, Google Drive cloud backup.
 
-## Google OAuth ব্র্যান্ডিং (Branding পেজ)
-- Application home page: `https://mhitlimited.github.io/pos/`
-- Privacy policy link: `https://mhitlimited.github.io/pos/privacy.html`
-- Terms of service link: `https://mhitlimited.github.io/pos/terms.html`
-- Authorized domain: `mhitlimited.github.io`
+## Changes in this build
+- **Local file backup removed.** Backup is cloud-only via Google Drive (optional sign-in).
+- **Full UI in English** (previously Bengali).
 
-## v7-এ নতুন
-- **পণ্য নির্বাচনের অ্যানিমেশন:** পণ্যে ট্যাপ করলে ছবি উড়ে কার্টে যায়, কার্ড হাইলাইট হয়ে `×সংখ্যা` ব্যাজ দেখায়, কার্টে আইটেম স্লাইড-ইন হয়। মোবাইলে নিচে ফ্লোটিং কার্ট বার।
-- **নতুন ডিজাইন:** গ্র্যাডিয়েন্ট থিম, গ্লাস টপবার, নতুন পণ্য কার্ড, মসৃণ মডাল ও টোস্ট।
-- **Google Drive সাইন ইন/সাইন আপ + অটো ব্যাকআপ:** ব্রাউজারের ডেটা মুছে গেলেও আবার সাইন ইন করলে সব ডেটা ফিরে আসে।
-
-## Google Drive সেটআপ (একবারই, বিনামূল্যে)
-1. https://console.cloud.google.com → নতুন প্রজেক্ট।
-2. **APIs & Services → Library** → **Google Drive API** → Enable।
-3. **OAuth consent screen** → External → অ্যাপের নাম দিন → Scopes: `drive.appdata`, `email`, `profile`, `openid` → শেষে **Publish app (In production)**। (এগুলো non-sensitive স্কোপ, গুগল ভেরিফিকেশন লাগে না। "Testing" মোডে রাখলে ৭ দিন পর সাইন-ইন মেয়াদ শেষ হয় ও ১০০ জনের সীমা থাকে।)
-4. **Credentials → Create credentials → OAuth client ID → Web application**।
-5. **Authorized JavaScript origins**-এ সাইটের ঠিকানা দিন, পাথ ও শেষের `/` ছাড়া। যেমন `https://username.github.io` এবং আপনার নিজের ডোমেইন (দুটোতে হোস্ট করলে দুটোই দিন)।
-6. পাওয়া Client ID `js/config.js`-এ বসান:
+## Google Drive setup (one-time, free)
+1. https://console.cloud.google.com → new project.
+2. **APIs & Services → Library** → enable **Google Drive API**.
+3. **OAuth consent screen** → External → app name → Scopes: `drive.appdata`, `email`, `profile`, `openid` → **Publish app**.
+4. **Credentials → OAuth client ID → Web application**.
+5. Add **Authorized JavaScript origins** (no path, no trailing slash), e.g. `https://username.github.io`.
+6. Put Client ID in `js/config.js`:
    ```js
    window.PROPOS_CONFIG = { googleClientId: 'xxxx.apps.googleusercontent.com' };
    ```
-7. GitHub/সার্ভারে আপলোড করুন। (`sw.js`-এর ভার্সন v8 হওয়ায় ইউজারদের কাছে "নতুন ভার্সন" বার আসবে; "আপডেট" ট্যাপ করলে চালু হবে।)
 
-## ক্লাউড ব্যাকআপ কীভাবে কাজ করে
-- ডেটা `drive.appdata` স্কোপে আপনার Drive-এর **গোপন অ্যাপ-ফোল্ডারে** `propos-data.json` নামে থাকে; অ্যাপ অন্য কোনো ফাইল দেখতে পায় না।
-- ডেটা বদলালে ~১২ সেকেন্ড পর অটো-সিঙ্ক। অফলাইনে থাকলে নেট এলে সিঙ্ক হয়।
-- প্রতিদিন প্রথম সিঙ্কের আগে আগের অবস্থার একটি স্ন্যাপশট রাখা হয় (সর্বশেষ ১৪টি) — সেটিংস/অ্যাকাউন্ট কার্ড → "পুরনো কপি" থেকে ফেরানো যায়।
-- দুই ডিভাইসে আলাদা ডেটা থাকলে "কোন ডেটা রাখবেন?" জিজ্ঞেস করে; কোনো ডেটা নীরবে ওভাররাইট হয় না।
-- **সীমাবদ্ধতা:** সার্ভার ছাড়া ব্রাউজার-অনলি লগইনে গুগলের অনুমতি-টোকেন ১ ঘণ্টা বৈধ। মেয়াদ শেষে সিঙ্ক বাকি থাকলে পরবর্তী ট্যাপে একটি ছোট পপআপ এসে নবায়ন হয়, অথবা উপরের চিপে ট্যাপ করুন।
+## Cloud backup
+- Data is stored in your Drive **private app data folder** as `propos-data.json` (scope `drive.appdata` only).
+- Auto-sync ~12 seconds after changes.
+- Daily snapshots (last 14) can be restored from Settings / account card.
+- Conflict between devices prompts which data to keep.
+
+## Legal
+- Privacy: `privacy.html`
+- Terms: `terms.html`
+- Provider: MH IT Limited

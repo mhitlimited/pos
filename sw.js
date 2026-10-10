@@ -1,4 +1,4 @@
-/* ProPOS Service Worker — নতুন ভার্সন দিলে CACHE_VERSION বাড়ান */
+/* ProPOS Service Worker — bump CACHE_VERSION on new release */
 const CACHE_VERSION = 'v8';
 const APP_CACHE = `propos-app-${CACHE_VERSION}`;
 const CDN_CACHE = `propos-cdn-${CACHE_VERSION}`;
