@@ -225,8 +225,7 @@
         <p class="xs muted mt2">Works on Android Chrome/Edge. Pair the printer in phone Bluetooth first.</p></div>
       <div class="card pad mb3"><div class="sec-title"><i class="fab fa-google ptext"></i> Google Drive Cloud Backup</div><div class="js-cloud-body"></div></div>
       <div class="card pad mb3"><div class="sec-title"><i class="fas fa-database ptext"></i> Data management</div>
-        <div class="kv"><span class="muted">Storage used</span><b class="${kb > 4000 ? 'bad' : ''}">${kb} KB / ~5000 KB</b></div>
-        <p class="xs muted mt2">Data is stored on this device and backed up to Google Drive when signed in. Local file backup has been removed.</p>
+        <p class="xs muted mt2">Shop data stays on this device for offline use and is backed up to <b>Google Drive</b> when signed in. App caches refresh automatically — no manual cache clear needed.</p>
         <button class="btn btn-danger-soft btn-block mt2" onclick="wipeAllData()"><i class="fas fa-trash"></i> Delete all data</button></div>
       <div class="card pad mb3"><div class="sec-title"><i class="fas fa-scale-balanced ptext"></i> Legal</div>
         <div class="grid2"><a class="btn btn-ghost" href="privacy.html" target="_blank" rel="noopener"><i class="fas fa-user-shield"></i> Privacy Policy</a><a class="btn btn-ghost" href="terms.html" target="_blank" rel="noopener"><i class="fas fa-file-contract"></i> Terms of Service</a></div></div>

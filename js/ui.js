@@ -105,15 +105,12 @@
   // ================= Backup / Restore =================
   let lastExport = 0;
   window.exportData = function (silent, force) {
-    if (silent && !force && Date.now() - lastExport < 30000) return;
-    lastExport = Date.now();
-    try { localStorage.setItem('propos_last_backup', String(Date.now())); localStorage.setItem('propos_auto_at', String(Date.now())); localStorage.removeItem('propos_dirty'); } catch (_) {}
-    const out = { app: 'ProPOS', version: 3, exportDate: new Date().toISOString() };
-    Object.keys(K).forEach(k => { if (k !== 'cart') out[k] = DB[k]; });
-    const n = new Date(), z = Core.z2;
-    const name = `propos-backup-${n.getFullYear()}-${z(n.getMonth() + 1)}-${z(n.getDate())}_${z(n.getHours())}-${z(n.getMinutes())}-${z(n.getSeconds())}.json`;
-    Core.download(name, JSON.stringify(out), 'application/json');
-    if (!silent) toast('Backup file downloaded ✓');
+    // Local file backup removed — shop data is backed up via Google Drive only.
+    // silent/force kept for API compatibility; does not download a file.
+    if (silent && !force) return;
+    if (!force) return;
+    // force=true still allows emergency wipe path to snapshot nothing extra
+    try { localStorage.setItem('propos_last_backup', String(Date.now())); localStorage.removeItem('propos_dirty'); } catch (_) {}
   };
   window.importData = function (input) {
     const file = input.files && input.files[0]; input.value = ''; if (!file) return;

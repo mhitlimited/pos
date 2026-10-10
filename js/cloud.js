@@ -176,7 +176,7 @@
         <p class="xs muted">Safety: if you choose cloud data, a backup of this device data will download first. If you keep device data, a copy of the old cloud data will be saved on Drive.</p>`,
       foot: `<button class="btn btn-primary" id="cf-cloud"><i class="fas fa-cloud-arrow-down"></i> Take cloud data</button><button class="btn btn-ghost" id="cf-local"><i class="fas fa-cloud-arrow-up"></i> Keep device data</button>`
     });
-    m.querySelector('#cf-cloud').onclick = () => { Modal.close(m); try { window.exportData(true); } catch (_) {} setTimeout(() => applyRemote(d, f), 400); };
+    m.querySelector('#cf-cloud').onclick = () => { Modal.close(m); setTimeout(() => applyRemote(d, f), 400); };
     m.querySelector('#cf-local').onclick = async () => {
       Modal.close(m); setStatus('syncing');
       try { await snapshotBefore(f, 'before-overwrite-' + C.todayKey() + '-' + Date.now().toString(36)); } catch (_) {}
@@ -219,7 +219,7 @@
   async function pull() {
     try { await requestToken(true); setStatus('syncing'); const f = await findMain(); if (!f) { setStatus('ok'); return toast('No data in cloud yet'); }
       const d = await download(f.id); setStatus('ok');
-      askConfirm('Current device data will be replaced by cloud data (a local safety backup will download first).', () => { try { window.exportData(true); } catch (_) {} setTimeout(() => applyRemote(d, f), 400); }, { title: 'Restore from cloud?', yes: 'Yes, restore', danger: true });
+      askConfirm('Current device data will be replaced by cloud data.', () => { setTimeout(() => applyRemote(d, f), 400); }, { title: 'Restore from cloud?', yes: 'Yes, restore', danger: true });
     } catch (e) { fail(e, true); }
   }
   async function snapshots() {
@@ -235,7 +235,7 @@
       m.querySelectorAll('button[data-id]').forEach(b => b.onclick = async () => {
         try {
           const d = await download(b.dataset.id); const f = await findMain();
-          askConfirm('Current device data will be replaced by this old copy, which will also become the main cloud data.', () => { try { window.exportData(true); } catch (_) {} Modal.close(m); setTimeout(() => applyRemote(d, f || { id: '', modifiedTime: '' }, true), 400); }, { title: 'Restore old copy?', yes: 'Yes', danger: true });
+          askConfirm('Current device data will be replaced by this old copy, which will also become the main cloud data.', () => { Modal.close(m); setTimeout(() => applyRemote(d, f || { id: '', modifiedTime: '' }, true), 400); }, { title: 'Restore old copy?', yes: 'Yes', danger: true });
         } catch (e) { fail(e, true); }
       });
     } catch (e) { fail(e, true); }

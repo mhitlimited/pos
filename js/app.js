@@ -204,7 +204,7 @@
         if (ex) ex.qty++; else DB.cart.push({ id: p.id, name: p.name, price: p.price, cost: p.cost || 0, qty: 1, unit: p.unit });
         C.save('cart'); this.lastAdded = { id: p.id, isNew: !ex }; this.renderCart(); Fx.added(p.id, quiet);
         if (opt.picked) toast('✓ Product selected: ' + p.name);
-        else if (quiet) Sound.play('beep');
+        else if (quiet) { try { window.Sound && window.Sound.play && window.Sound.play('beep'); } catch (_) {} }
       };
       if (p.expiry && p.expiry < C.todayKey()) askConfirm(`"${p.name}"  has expired. Sell anyway?`, go, { title: 'Expired product', danger: true, yes: 'Yes, add' });
       else go();
@@ -491,13 +491,11 @@
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && window.Lock) Lock.onResume(); else if (window.Lock) Lock.onHide(); });
   });
 
-  // ================= Hardware barcode scanner (USB/Bluetooth keyboard wedge) =================
-  // Desktop POS: scanners type digits fast and send Enter — auto-add product to cart
-  (function 
+
   // ================= Desktop keyboard shortcuts =================
   document.addEventListener('keydown', e => {
     if (e.ctrlKey || e.metaKey || e.altKey) return;
-    const tag = (document.activeElement && document.activeElement.tagName || '').toLowerCase();
+    const tag = ((document.activeElement && document.activeElement.tagName) || '').toLowerCase();
     const typing = tag === 'input' || tag === 'textarea' || tag === 'select' || (document.activeElement && document.activeElement.isContentEditable);
     if (document.querySelector('.modal-back,.ui-confirm-backdrop,.lock,.scan')) {
       if (e.key === 'Escape') { try { Modal.closeAll(); } catch (_) {} }
@@ -517,11 +515,10 @@
     }
   });
 
-  // setupWedgeScanner() {
+  // ================= Hardware barcode scanner (USB/Bluetooth keyboard wedge) =================
+  (function setupWedgeScanner() {
     let buf = '', last = 0, timer = null;
-    const GAP = 80;      // max ms between chars from a scanner
-    const MIN_LEN = 4;   // ignore short accidental keys
-    const RESET = 120;   // flush incomplete buffer
+    const GAP = 80, MIN_LEN = 4, RESET = 120;
 
     function isTypingTarget(el) {
       if (!el) return false;
@@ -529,8 +526,7 @@
       if (t === 'textarea' || t === 'select') return true;
       if (t === 'input') {
         const ty = (el.type || '').toLowerCase();
-        // allow POS search box to still work with Enter via POS.enter — but wedge on other fields should not steal
-        if (el.id === 'pos-search') return false; // we handle barcode path ourselves
+        if (el.id === 'pos-search') return false;
         return ty !== 'button' && ty !== 'checkbox' && ty !== 'radio' && ty !== 'submit';
       }
       if (el.isContentEditable) return true;
@@ -549,8 +545,7 @@
         POS.add(p.id, true, { picked: true });
         POS.q = '';
         const s = document.getElementById('pos-search');
-        if (s) { s.value = ''; }
-        // Blur active field so next scan is captured cleanly; cart updates for checkout
+        if (s) s.value = '';
         try { if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } catch (_) {}
         try { window.Sound && window.Sound.play && window.Sound.play('ok'); } catch (_) {}
       } else {
@@ -562,7 +557,6 @@
     document.addEventListener('keydown', e => {
       if (App.view !== 'pos') return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
-      // Don't interfere when user is typing in forms (except pos-search)
       if (isTypingTarget(document.activeElement) && document.activeElement && document.activeElement.id !== 'pos-search') return;
       if (document.querySelector('.modal-back, .ui-confirm-backdrop, .scan')) return;
 
@@ -576,11 +570,9 @@
           e.stopPropagation();
           flush();
         }
-        // short buffer: let normal Enter (POS.enter on search) work
         return;
       }
       if (e.key.length === 1) {
-        // scanner chars — collect; if focus is pos-search, still collect for wedge path on Enter
         buf += e.key;
         if (timer) clearTimeout(timer);
         timer = setTimeout(() => { buf = ''; }, RESET * 3);

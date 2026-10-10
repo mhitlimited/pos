@@ -1,13 +1,29 @@
-/* PWA: Service Worker, install prompt, update bar, offline badge, persistent storage */
+/* PWA: network-first updates, auto cache clear, install + offline badge */
 (function () {
   'use strict';
 
-  // ---------- Service Worker ----------
+  async function clearOldCaches() {
+    if (!('caches' in window)) return;
+    try {
+      const keys = await caches.keys();
+      const keep = keys.filter(k => !k.startsWith('propos-') || k.indexOf('v9') !== -1);
+      // Delete all propos caches except current v9 — forces fresh assets next load
+      await Promise.all(
+        keys.filter(k => k.startsWith('propos-') && k.indexOf('v9') === -1).map(k => caches.delete(k))
+      );
+    } catch (_) {}
+  }
+
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', async () => {
       try {
+        await clearOldCaches();
+
         const hadController = !!navigator.serviceWorker.controller;
         const reg = await navigator.serviceWorker.register('./sw.js', { scope: './' });
+
+        // Always check for updates on load
+        try { await reg.update(); } catch (_) {}
 
         if (reg.waiting && hadController) showUpdateBar(reg.waiting);
 
@@ -16,21 +32,32 @@
           if (!nw) return;
           nw.addEventListener('statechange', () => {
             if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+              // Auto-activate new SW (skipWaiting already in install) + soft reload prompt
               showUpdateBar(nw);
             }
           });
         });
 
-        // Reload once when new SW takes control
         let refreshing = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
           if (refreshing || !hadController) return;
           refreshing = true;
-          location.reload();
+          // Clear any leftover caches then reload once
+          clearOldCaches().finally(() => location.reload());
         });
 
-        // Periodic update check (every 30 min while tab open)
-        setInterval(() => { try { reg.update(); } catch (_) {} }, 30 * 60 * 1000);
+        // Periodic update check
+        setInterval(() => { try { reg.update(); } catch (_) {} }, 15 * 60 * 1000);
+
+        // Tell SW to clear stale caches when page becomes visible
+        document.addEventListener('visibilitychange', () => {
+          if (document.visibilityState === 'visible') {
+            try { reg.update(); } catch (_) {}
+            if (navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage('CLEAR_CACHES');
+            }
+          }
+        });
       } catch (err) {
         console.warn('Service Worker registration failed:', err);
       }
@@ -81,17 +108,18 @@
     bar.id = 'pwa-update-bar';
     bar.className = 'pwa-update-bar';
     bar.innerHTML =
-      '<div class="msg">New version available<small>Update for the latest features and fixes</small></div>' +
+      '<div class="msg">New version available<small>Tap update to load the latest app</small></div>' +
       '<button type="button">Update</button>';
     bar.querySelector('button').onclick = () => {
-      try { worker.postMessage('SKIP_WAITING'); } catch (_) {}
-      // Fallback reload if controllerchange does not fire
-      setTimeout(() => location.reload(), 800);
+      try {
+        if (worker && worker.postMessage) worker.postMessage('SKIP_WAITING');
+      } catch (_) {}
+      clearOldCaches().finally(() => setTimeout(() => location.reload(), 400));
     };
     document.body.appendChild(bar);
   }
 
-  // ---------- Persistent storage ----------
+  // ---------- Persistent storage for shop data (not SW cache) ----------
   if (navigator.storage && navigator.storage.persist) {
     navigator.storage.persist().catch(() => {});
   }
@@ -114,7 +142,6 @@
   window.addEventListener('offline', updateNet);
   document.addEventListener('DOMContentLoaded', updateNet);
 
-  // ---------- Display mode / standalone polish ----------
   try {
     if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone) {
       document.documentElement.classList.add('pwa-standalone');
