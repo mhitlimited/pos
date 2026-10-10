@@ -576,3 +576,86 @@ code.sel{display:inline-block;margin-top:4px;-webkit-user-select:all;user-select
 @media(min-width:1024px){.only-desk{display:inline-flex!important}}
 @media(min-width:1024px){.main{margin-left:268px}}
 @media(min-width:1024px){.cart-bar{left:calc(268px + 12px)}}
+
+/* ========== Topbar actions spacing ========== */
+.topbar-actions{gap:10px}
+.topbar-actions .icon-btn{margin:0}
+.topbar-actions .sync-chip{margin-right:2px}
+
+/* ========== Light UI motion ========== */
+@keyframes fadeUp{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes scaleIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+@keyframes slideInRight{from{opacity:0;transform:translateX(12px)}to{opacity:1;transform:none}}
+@keyframes softPulse{0%,100%{box-shadow:0 0 0 0 rgba(79,70,229,.25)}50%{box-shadow:0 0 0 6px rgba(79,70,229,0)}}
+
+.view{animation:fadeUp .28s ease both}
+.pcard{animation:fadeUp .32s ease both}
+.pcard:nth-child(1){animation-delay:.02s}
+.pcard:nth-child(2){animation-delay:.04s}
+.pcard:nth-child(3){animation-delay:.06s}
+.pcard:nth-child(4){animation-delay:.08s}
+.pcard:nth-child(5){animation-delay:.1s}
+.pcard:nth-child(6){animation-delay:.12s}
+.pcard.sel{outline:2px solid var(--primary);outline-offset:0}
+.stat{animation:fadeUp .3s ease both}
+.card{transition:box-shadow .2s ease,border-color .2s ease,transform .15s ease}
+.btn{transition:transform .12s ease,filter .15s ease,box-shadow .15s ease,background .15s}
+.btn:active{transform:scale(.97)}
+.nav-link{transition:background .15s,color .15s,transform .15s,box-shadow .2s}
+.drawer{transition:transform .32s cubic-bezier(.32,.72,0,1)}
+.scrim{animation:fadeIn .2s ease}
+.modal-back{animation:fadeIn .18s ease}
+.modal-sheet{animation:scaleIn .22s cubic-bezier(.32,.72,0,1)}
+.toast-show,#toast:not(.hidden){animation:fadeUp .25s ease}
+.cart-bar{transition:transform .2s ease,box-shadow .2s,background .2s}
+.cart-bar:not(.empty){animation:softPulse 2.4s ease infinite}
+.sync-chip{transition:background .2s,transform .12s}
+.sync-chip:active{transform:scale(.96)}
+
+/* Refined search & chips */
+.search-wrap{transition:box-shadow .2s}
+.search-wrap:focus-within{box-shadow:0 0 0 3px color-mix(in srgb,var(--primary) 22%,transparent)}
+.chips .chip,.chip{transition:background .15s,color .15s,transform .12s}
+.chip:active{transform:scale(.96)}
+
+/* PWA bars */
+.pwa-update-bar,.pwa-install-btn{
+  font-family:system-ui,-apple-system,sans-serif;
+  animation:fadeUp .35s ease both
+}
+.pwa-update-bar{
+  position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:10000;
+  max-width:420px;margin:0 auto;background:var(--card);color:var(--text);
+  border:1px solid var(--border);border-radius:16px;padding:14px 16px;
+  display:flex;gap:12px;align-items:center;justify-content:space-between;
+  box-shadow:0 12px 40px rgba(15,23,42,.18)
+}
+.pwa-update-bar .msg{font-size:14px;font-weight:600;line-height:1.35}
+.pwa-update-bar .msg small{display:block;font-weight:500;color:var(--muted);font-size:12px;margin-top:2px}
+.pwa-update-bar button{
+  flex-shrink:0;background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;border:0;
+  border-radius:12px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer;
+  box-shadow:0 4px 12px rgba(79,70,229,.35)
+}
+.pwa-install-btn{
+  position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:9990;
+  background:linear-gradient(135deg,var(--primary),var(--primary2));color:#fff;border:0;
+  border-radius:14px;padding:12px 16px;font-weight:700;font-size:13px;cursor:pointer;
+  box-shadow:0 8px 24px rgba(79,70,229,.4);display:flex;align-items:center;gap:8px
+}
+.pwa-install-btn:active{transform:scale(.97)}
+#net-badge{
+  position:fixed;top:calc(10px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);
+  z-index:10001;background:#f59e0b;color:#fff;font-size:12px;font-weight:700;
+  padding:6px 14px;border-radius:999px;box-shadow:0 4px 14px rgba(245,158,11,.35);
+  pointer-events:none;animation:fadeUp .25s ease
+}
+@media(min-width:1280px){
+  .pwa-install-btn{bottom:24px;right:24px}
+  .pwa-update-bar{bottom:24px}
+}
+@media(prefers-reduced-motion:reduce){
+  .view,.pcard,.stat,.modal-sheet,.drawer,.cart-bar:not(.empty){animation:none!important}
+  .btn,.nav-link,.pcard{transition:none}
+}

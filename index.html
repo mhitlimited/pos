@@ -39,11 +39,10 @@
 
 <!-- Mobile topbar -->
 <header class="topbar">
-    <div class="flex items-c gap2"><div class="logo" style="width:34px;height:34px;font-size:14px"><i class="fas fa-cash-register"></i></div><b style="font-size:17px">ProPOS</b></div>
-    <div class="flex items-c">
+    <div class="flex items-c gap2"><div class="logo" style="width:34px;height:34px"><svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M4 7.5A2.5 2.5 0 016.5 5h11A2.5 2.5 0 0120 7.5v9a2.5 2.5 0 01-2.5 2.5h-11A2.5 2.5 0 014 16.5v-9z" stroke="currentColor" stroke-width="1.75"/><path d="M8 9.5h8M8 12.5h5" stroke="currentColor" stroke-width="1.75" stroke-linecap="round"/><circle cx="16.5" cy="15" r="1.25" fill="currentColor"/></svg></div><b style="font-size:17px">ProPOS</b></div>
+    <div class="flex items-c topbar-actions">
         <button type="button" class="sync-chip js-chip" onclick="Cloud.panel()" title="Google Drive Backup"></button>
         <button class="icon-btn" onclick="Theme.toggle()" title="Dark/Light"><i class="theme-ico fas fa-moon"></i></button>
-        <button class="icon-btn pos-only" onclick="App.toggleCart()" title="Cart"><i class="fas fa-bag-shopping"></i><span class="cart-badge hidden" id="cart-badge">0</span></button>
         <button class="icon-btn" onclick="App.toggleNav()" title="Menu"><i class="fas fa-bars"></i></button>
     </div>
 </header>
